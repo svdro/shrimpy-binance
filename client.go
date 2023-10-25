@@ -32,9 +32,9 @@ func NewClient(apiKey, apiSecret string) *Client {
 	return c
 }
 
-// Client is the main struct for interacting with the Binance API.
+// Client is the main entry-point for interacting with shrimpy-binance.
 // It is responsible for managing time across all services.
-// Client can make new REST sevices and WebSocket services.
+// Client can make new REST sevices and WebSocket streams.
 type Client struct {
 	*timeHandler
 	restClient *RESTClient

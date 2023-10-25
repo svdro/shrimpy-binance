@@ -65,7 +65,8 @@ type RESTClient struct {
 }
 
 // Do makes the http request. It returns the response or error, if any.
-func (rc *RESTClient) Do(ctx context.Context,
+func (rc *RESTClient) Do(
+	ctx context.Context,
 	sd *serviceDefinition,
 	p params,
 ) ([]byte, *MetaDataREST, error) {
@@ -79,7 +80,7 @@ func (rc *RESTClient) Do(ctx context.Context,
 	}
 
 	// create request
-	req, err := rc.createRequest(ctx, sd, p.urlValues())
+	req, err := rc.createRequest(ctx, sd, p.UrlValues())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -97,6 +98,7 @@ func (rc *RESTClient) Do(ctx context.Context,
 	switch resp.StatusCode {
 	case int(HTTPStatusOK):
 	default:
+		fmt.Printf("%s", data)
 		rc.logger.WithFields(log.Fields{
 			"status_code": resp.StatusCode,
 			"body":        fmt.Sprintf("%s", data),

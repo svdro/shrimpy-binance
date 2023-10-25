@@ -7,15 +7,18 @@ import (
 
 /* ==================== ServerTimeService ================================ */
 
-func (s *ServerTimeService) toParams() params {
-	return params{}
-}
-
+// ServerTimeService
 type ServerTimeService struct {
 	rc *RESTClient
 	serviceDefinition
 }
 
+// toParams converts all parameter fields of the service to a params struct.
+func (s *ServerTimeService) toParams() params {
+	return params{}
+}
+
+// Do sends the request and returns a ServerTimeResponse and error, if any.
 func (s *ServerTimeService) Do(ctx context.Context) (*ServerTimeResponse, error) {
 	p := s.toParams()
 
@@ -28,8 +31,7 @@ func (s *ServerTimeService) Do(ctx context.Context) (*ServerTimeResponse, error)
 	return newServerTimeResponse(s.rc.c.timeHandler, meta, resp)
 }
 
-/* ==================== ServerTimeResponse ================================ */
-
+// newServerTimeResponse
 func newServerTimeResponse(th *timeHandler, meta *MetaDataREST, data []byte) (*ServerTimeResponse, error) {
 	r := &ServerTimeResponse{
 		MetaDataREST: meta,
@@ -41,6 +43,7 @@ func newServerTimeResponse(th *timeHandler, meta *MetaDataREST, data []byte) (*S
 	return r, nil
 }
 
+// ServerTimeResponse
 type ServerTimeResponse struct {
 	*MetaDataREST
 	ServerTime int64 `json:"serverTime"`
