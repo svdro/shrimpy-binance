@@ -5,7 +5,7 @@ Endpoints are implemented on a "as needed" basis.
 
 ### RESTClient
 
-RESTClient implements `services` that return `Responses`
+RESTClient implements `services` that return `Responses`.
 
 #### Endpoints
  * [ ] `/api/v3/ping`
@@ -23,19 +23,20 @@ websocket connection.
 
 
 #### TODO:
- * [x] Implement authentication
- * [ ] Implement RateLimitHandling
- * [ ] Implement TimeHandler
- * [ ] Handle status codes
- * [ ] MetaDataREST
-   * [ ] What should this be? 
-   * [ ] I don't like the name.
-   * [ ] Should I scrap responseHeader, and include it's fields here?
  * [ ] Client should be able to register MetaData channels 
    * [ ] RestMetaData -> Holds relevant data pertaining to requests 
    * [ ] WsMetaData -> Holds relevant data pertaining to ws streams
+ * [ ] Implement RateLimitHandling
+ * [ ] Implement TimeHandler
+ * [ ] Implement RestClient
+   * [x] ServiceMeta
+   * [x] Implement authentication
+   * [ ] Implement Handle status codes
  * [ ] Implement WSClient
    * [ ] Implement Websocket Market Streams (Spot/Margin, Futures)
    * [ ] Market data requests (WebsocketAPI)
+ * [ ] Implement WSAPIClient
+   * [ ] Hybrid between RESTClient and WSClient 
+   * [ ] Only really need to implement market data endpoints (serverTime).
  * [x] Move ratelimit handler from RESTClient to Client 
        (WebSocket API, and Spot/Margin API share rate limits :( )

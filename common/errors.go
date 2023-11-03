@@ -1,4 +1,4 @@
-package binance
+package common
 
 import (
 	"fmt"
@@ -41,12 +41,16 @@ Bad Status Code Error Messages Examples:
 		* 400 -> {"code":-1100,"msg":"Illegal characters found in parameter 'symbols'; legal range is '^\\[(\"[A-Z0-9-_.]{1,20}\"(,\"[A-Z0-9-_.]{1,20}\"){0,}){0,1}\\]$'."}
 	* e.g. API Key Problems
 		* 400 -> {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+		* 401 -> {"code":-2014,"msg":"API-key format invalid."}
 	* e.g. CancelOrder
 	  * 400 -> {"code":-2011,"msg":"Unknown order sent."} (trying to cancel an order that doesnot exist)
 	* e.g. Duplicate order sent (2 orders with same client order id)
 	  * 400 -> {"code":-2010,"msg":"Duplicate order sent."}
 	* e.g. ListenKey does not exist
+		* 400 -> {"code":-1105,"msg":"Parameter 'listenKey' was empty."}
     * 400 -> {"code":-1105,"msg":"This listenKey does not exist."}
+		* 400 -> {"code":-1125,"msg":"This listenKey does not exist."}
+		* 400 -> {"code":-1100,"msg":"Illegal characters found in parameter 'listenKey'; legal range is '^[a-zA-Z0-9]{1,60}$'."}
 */
 
 //// BadRequestError is an error returned when the server returns a 400 status code.

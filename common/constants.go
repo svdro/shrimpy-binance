@@ -1,4 +1,4 @@
-package binance
+package common
 
 import "net/http"
 
@@ -18,27 +18,28 @@ const (
 	DataSourceMemory
 	DataSourceDatabase
 
-	endpointAPI  BIEndpoint = "api.binance.com"
-	endpointFAPI BIEndpoint = "fapi.binance.com"
+	EndpointAPI  BIEndpoint = "api.binance.com"
+	EndpointFAPI BIEndpoint = "fapi.binance.com"
 
-	endpointTypeAPI  BIEndpointType = "api"
-	endpointTypeSAPI BIEndpointType = "sapi"
-	endpointTypeFAPI BIEndpointType = "fapi"
+	EndpointTypeAPI  BIEndpointType = "api"
+	EndpointTypeSAPI BIEndpointType = "sapi"
+	EndpointTypeFAPI BIEndpointType = "fapi"
 
 	HTTPStatusOK              BIHttpResponseCode = http.StatusOK              // (200)
 	HTTPStatusTeapot          BIHttpResponseCode = http.StatusTeapot          // (418) IP ban
 	HTTPStatusTooManyRequests BIHttpResponseCode = http.StatusTooManyRequests // (429) Backoff
 	HTTPStatusBadRequest      BIHttpResponseCode = http.StatusBadRequest      // (400) Invalid request
+	HTTPStatusUnauthorized    BIHttpResponseCode = http.StatusUnauthorized    // (401) e.g invalid format
 
-	intervalSecond BIRateLimitIntervalType = "SECOND"
-	intervalMinute BIRateLimitIntervalType = "MINUTE"
-	intervalDay    BIRateLimitIntervalType = "DAY"
+	IntervalSecond BIRateLimitIntervalType = "SECOND"
+	IntervalMinute BIRateLimitIntervalType = "MINUTE"
+	IntervalDay    BIRateLimitIntervalType = "DAY"
 
 	SecurityTypeNone   BISecurityType = iota // NONE
 	SecurityTypeApiKey                       // USER_STREAM, MARKET_DATA
 	SecurityTypeSigned                       // TRADE, MARGIN, USER_DATA
 
-	rateLimitTypeIP  BIRateLimitType = "REQUEST_WEIGHT"
-	rateLimitTypeUID BIRateLimitType = "ORDERS"
-	rateLimitTypeRAW BIRateLimitType = "RAW_REQUESTS"
+	RateLimitTypeIP  BIRateLimitType = "REQUEST_WEIGHT"
+	RateLimitTypeUID BIRateLimitType = "ORDERS"
+	RateLimitTypeRAW BIRateLimitType = "RAW_REQUESTSLNano"
 )
