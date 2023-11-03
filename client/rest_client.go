@@ -20,7 +20,7 @@ func newRestClient(c *Client) *restClient {
 	return &restClient{
 		c:          c,
 		httpClient: http.DefaultClient,
-		logger:     c.logger.WithField("client", "restClient"),
+		logger:     c.logger.WithField("_caller", "restClient"),
 	}
 }
 
@@ -41,6 +41,7 @@ func (rc *restClient) TimeHandler() common.TimeHandler {
 // All data needed to make the request is contained in ServiceMeta (SD).
 // Any meta data that is created during the request is stored in ServiceMeta.
 func (rc *restClient) Do(ctx context.Context, sm *common.ServiceMeta, p url.Values) ([]byte, error) {
+	rc.logger.Info("Do")
 
 	// fetch rate limit handler, panic if not found
 	sd := sm.SD

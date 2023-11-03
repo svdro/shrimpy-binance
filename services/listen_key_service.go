@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/svdro/shrimpy-binance/common"
 )
 
@@ -17,8 +18,9 @@ type CreateListenKeyResponse struct {
 
 // CreateListenKeyService
 type CreateListenKeyService struct {
-	SM common.ServiceMeta
-	rc common.RESTClient
+	SM     common.ServiceMeta
+	rc     common.RESTClient
+	logger *log.Entry
 }
 
 // toParams converts all parameter fields of the service to a params struct.
@@ -26,16 +28,7 @@ func (s *CreateListenKeyService) toParams() *params {
 	return &params{}
 }
 
-// Do does the CreateListenKey request.
-func (s *CreateListenKeyService) Do(ctx context.Context) (*CreateListenKeyResponse, error) {
-	params := s.toParams()
-	data, err := s.rc.Do(ctx, &s.SM, params.UrlValues())
-	if err != nil {
-		return nil, err
-	}
-	return s.parseResponse(data)
-}
-
+// parseResponse parses the request response into the CreateListenKeyResponse struct.
 func (s *CreateListenKeyService) parseResponse(data []byte) (*CreateListenKeyResponse, error) {
 	resp := &CreateListenKeyResponse{}
 	if err := resp.ParseBaseResponse(&s.SM, s.rc.TimeHandler()); err != nil {
@@ -50,6 +43,21 @@ func (s *CreateListenKeyService) parseResponse(data []byte) (*CreateListenKeyRes
 
 }
 
+// Do does the CreateListenKey request.
+func (s *CreateListenKeyService) Do(ctx context.Context) (*CreateListenKeyResponse, error) {
+	params := s.toParams()
+	data, err := s.rc.Do(ctx, &s.SM, params.UrlValues())
+	if err != nil {
+		s.logger.WithError(err).Error("Do")
+		return nil, err
+	}
+	resp, err := s.parseResponse(data)
+	if err != nil {
+		s.logger.WithError(err).Error("Do")
+	}
+	return resp, err
+}
+
 /* ==================== PingListenKeyService ============================= */
 
 // PingListenKeyResponse
@@ -61,6 +69,7 @@ type PingListenKeyResponse struct {
 type PingListenKeyService struct {
 	SM        common.ServiceMeta
 	rc        common.RESTClient
+	logger    *log.Entry
 	listenKey string
 }
 
@@ -92,9 +101,14 @@ func (s *PingListenKeyService) Do(ctx context.Context) (*PingListenKeyResponse, 
 	params := s.toParams()
 	data, err := s.rc.Do(ctx, &s.SM, params.UrlValues())
 	if err != nil {
+		s.logger.WithError(err).Error("Do")
 		return nil, err
 	}
-	return s.parseResponse(data)
+	resp, err := s.parseResponse(data)
+	if err != nil {
+		s.logger.WithError(err).Error("Do")
+	}
+	return resp, err
 }
 
 /* ==================== CloseListenKeyService ============================ */
@@ -108,6 +122,7 @@ type CloseListenKeyResponse struct {
 type CloseListenKeyService struct {
 	SM        common.ServiceMeta
 	rc        common.RESTClient
+	logger    *log.Entry
 	listenKey string
 }
 
@@ -139,7 +154,12 @@ func (s *CloseListenKeyService) Do(ctx context.Context) (*CloseListenKeyResponse
 	params := s.toParams()
 	data, err := s.rc.Do(ctx, &s.SM, params.UrlValues())
 	if err != nil {
+		s.logger.WithError(err).Error("Do")
 		return nil, err
 	}
-	return s.parseResponse(data)
+	resp, err := s.parseResponse(data)
+	if err != nil {
+		s.logger.WithError(err).Error("Do")
+	}
+	return resp, err
 }

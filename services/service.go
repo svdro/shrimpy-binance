@@ -3,6 +3,7 @@ package services
 import (
 	"net/http"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/svdro/shrimpy-binance/common"
 )
 
@@ -129,68 +130,77 @@ var (
 
 /* ==================== APIServices ====================================== */
 
-func NewSpotMarginPingService(rc common.RESTClient) *PingService {
+func NewSpotMarginPingService(rc common.RESTClient, logger *log.Entry) *PingService {
 	return &PingService{
-		SM: *common.NewServiceMeta(APIServices["ping"]),
-		rc: rc,
+		SM:     *common.NewServiceMeta(APIServices["ping"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "SpotMarginPingService"),
 	}
 }
 
-func NewSpotMarginServerTimeService(rc common.RESTClient) *ServerTimeService {
+func NewSpotMarginServerTimeService(rc common.RESTClient, logger *log.Entry) *ServerTimeService {
 	return &ServerTimeService{
-		SM: *common.NewServiceMeta(APIServices["serverTime"]),
-		rc: rc,
+		SM:     *common.NewServiceMeta(APIServices["serverTime"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "SpotMarginServerTimeService"),
 	}
 }
 
-func NewSpotCreateListenKeyService(rc common.RESTClient) *CreateListenKeyService {
+func NewSpotCreateListenKeyService(rc common.RESTClient, logger *log.Entry) *CreateListenKeyService {
 	return &CreateListenKeyService{
-		SM: *common.NewServiceMeta(APIServices["createListenKey"]),
-		rc: rc,
+		SM:     *common.NewServiceMeta(APIServices["createListenKey"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "SpotCreateListenKeyService"),
 	}
 }
 
-func NewSpotPingListenKeyService(rc common.RESTClient) *PingListenKeyService {
+func NewSpotPingListenKeyService(rc common.RESTClient, logger *log.Entry) *PingListenKeyService {
 	return &PingListenKeyService{
-		SM: *common.NewServiceMeta(APIServices["pingListenKey"]),
-		rc: rc,
+		SM:     *common.NewServiceMeta(APIServices["pingListenKey"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "SpotPingListenKeyService"),
 	}
 }
 
-func NewSpotCloseListenKeyService(rc common.RESTClient) *CloseListenKeyService {
+func NewSpotCloseListenKeyService(rc common.RESTClient, logger *log.Entry) *CloseListenKeyService {
 	return &CloseListenKeyService{
-		SM: *common.NewServiceMeta(APIServices["closeListenKey"]),
-		rc: rc,
+		SM:     *common.NewServiceMeta(APIServices["closeListenKey"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "SpotCloseListenKeyService"),
 	}
 }
 
 /* ==================== SAPIServices ===================================== */
-func NewMarginCreateListenKeyService(rc common.RESTClient) *CreateListenKeyService {
+func NewMarginCreateListenKeyService(rc common.RESTClient, logger *log.Entry) *CreateListenKeyService {
 	return &CreateListenKeyService{
-		SM: *common.NewServiceMeta(SAPIServices["createListenKey"]),
-		rc: rc,
+		SM:     *common.NewServiceMeta(SAPIServices["createListenKey"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "MarginCreateListenKeyService"),
 	}
 }
 
-func NewMarginPingListenKeyService(rc common.RESTClient) *PingListenKeyService {
+func NewMarginPingListenKeyService(rc common.RESTClient, logger *log.Entry) *PingListenKeyService {
 	return &PingListenKeyService{
-		SM: *common.NewServiceMeta(SAPIServices["pingListenKey"]),
-		rc: rc,
+		SM:     *common.NewServiceMeta(SAPIServices["pingListenKey"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "MarginPingListenKeyService"),
 	}
 }
 
-func NewMarginCloseListenKeyService(rc common.RESTClient) *CloseListenKeyService {
+func NewMarginCloseListenKeyService(rc common.RESTClient, logger *log.Entry) *CloseListenKeyService {
 	return &CloseListenKeyService{
-		SM: *common.NewServiceMeta(SAPIServices["closeListenKey"]),
-		rc: rc,
+		SM:     *common.NewServiceMeta(SAPIServices["closeListenKey"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "MarginCloseListenKeyService"),
 	}
 }
 
 /* ==================== FAPIServices ===================================== */
 
-func NewFuturesPingService(rc common.RESTClient) *PingService {
+func NewFuturesPingService(rc common.RESTClient, logger *log.Entry) *PingService {
 	return &PingService{
-		SM: *common.NewServiceMeta(FAPIServices["ping"]),
-		rc: rc,
+		SM:     *common.NewServiceMeta(FAPIServices["ping"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "FuturesPingService"),
 	}
 }

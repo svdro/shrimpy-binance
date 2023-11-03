@@ -1,14 +1,27 @@
 package client
 
-import "time"
+import (
+	"time"
+
+	log "github.com/sirupsen/logrus"
+)
 
 /* ==================== timeHandler ====================================== */
+
+// newTimeHandler returns a new timeHandler.
+func newTimeHandler(c *Client) *timeHandler {
+	return &timeHandler{
+		c:      c,
+		logger: c.logger.WithField("_caller", "timeHandler"),
+	}
+}
 
 // timeHandler is responsible for keeping in sync with server time and
 // converting between local time and server time.
 type timeHandler struct {
 	c      *Client
 	offset int64 // offset from server time in nanoseconds
+	logger *log.Entry
 }
 
 // sync
