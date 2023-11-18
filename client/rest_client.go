@@ -16,27 +16,30 @@ import (
 	"github.com/svdro/shrimpy-binance/common"
 )
 
-/* ==================== restClient ======================================= */
-
-func newRestClient(c *Client) *restClient {
+// newRestClient creates a new restClient.
+func newRestClient(th common.TimeHandler, rlm *rateLimitManager, apiConfig *APIConfig, logger *log.Entry) *restClient {
 	return &restClient{
-		c:          c,
+		th:         th,
+		rlm:        rlm,
 		httpClient: http.DefaultClient,
-		logger:     c.logger.WithField("_caller", "restClient"),
+		logger:     logger.WithField("_caller", "restClient"),
 	}
 }
 
 // restClient is responsible for making http requests to binance's REST APIs.
 type restClient struct {
-	c          *Client
+	th         common.TimeHandler
+	rlm        *rateLimitManager
+	apiConfig  *APIConfig
 	httpClient *http.Client
 	logger     *log.Entry
 }
 
 // TimeHandler returns the TimeHandler associated with Client.
-// This is needed when a service needs to know the current time.
+// This is needed when a service that uses the restClient needs to
+// access the TimeHandler.
 func (rc *restClient) TimeHandler() common.TimeHandler {
-	return rc.c.th
+	return rc.th
 }
 
 // Do makes an http request to a binance REST API.
@@ -72,30 +75,29 @@ func (rc *restClient) Do(ctx context.Context, sm *common.ServiceMeta, p url.Valu
 	return data, nil
 }
 
-// doRequest makes the http request and records timestamps in MetaDataREST.
+// doRequest makes the http request.
+// It records timestamps in ServiceMeta.
+// It updates the rateLimitManager.
 func (rc *restClient) doRequest(
 	req *http.Request,
 	sd *common.ServiceDefinition,
 	sm *common.ServiceMeta,
 ) (*http.Response, error) {
 
-	// get rlm
-	rlm := rc.c.rlm
-
 	// record timestamps
-	sm.TSLSent = rc.c.th.TSLNow()
-	sm.TSSSent = rc.c.th.TSSNow()
+	sm.TSLSent = rc.th.TSLNow()
+	sm.TSSSent = rc.th.TSSNow()
 	defer func() {
-		sm.TSLRecv = rc.c.th.TSLNow()
-		sm.TSSRecv = rc.c.th.TSSNow()
+		sm.TSLRecv = rc.th.TSLNow()
+		sm.TSSRecv = rc.th.TSSNow()
 	}()
 
 	// register pending API call with rateLimitManager
 	// return RetryAfterError if request would exceed the rate limit
-	if err := rlm.RegisterPending(sd); err != nil {
+	if err := rc.rlm.RegisterPending(sd); err != nil {
 		return nil, err
 	}
-	defer rlm.UnregisterPending(sd)
+	defer rc.rlm.UnregisterPending(sd)
 
 	// make request
 	resp, err := rc.httpClient.Do(req)
@@ -108,9 +110,25 @@ func (rc *restClient) doRequest(
 		return nil, err
 	}
 
-	rlm.UpdateUsed(sm.SRH.RateLimitUpdates, sm.SRH.TSSRespHeader)
+	rc.rlm.UpdateUsed(sm.SRH.RateLimitUpdates, sm.SRH.TSSRespHeader)
 
 	return resp, nil
+}
+
+// sign adds "timestamp", "recvWindow", and "signature" to urlValues.
+// NOTE: the "X-MBX-APIKEY" header is not added here.
+func (rc *restClient) sign(urlValues *url.Values) {
+	// add timestamp and recvWindow to urlValues, encode query string
+	tsMilli := rc.th.TSSNow() / 1e6
+	urlValues.Add("timestamp", strconv.FormatInt(tsMilli, 10))
+	urlValues.Add("recvWindow", strconv.Itoa(rc.apiConfig.recvWindow))
+	queryString := urlValues.Encode()
+
+	// calculate signature and add to urlValues
+	mac := hmac.New(sha256.New, []byte(rc.apiConfig.apiSecret))
+	mac.Write([]byte(queryString))
+	signature := mac.Sum(nil)
+	urlValues.Add("signature", fmt.Sprintf("%x", signature))
 }
 
 // createRequest creates a new http request and implements binance's endpoint
@@ -133,28 +151,13 @@ func (rc *restClient) createRequest(
 	case common.SecurityTypeSigned:
 		rc.sign(&urlValues)
 		req.URL.RawQuery = urlValues.Encode()
-		req.Header.Set("X-MBX-APIKEY", rc.c.apiKey)
+		req.Header.Set("X-MBX-APIKEY", rc.apiConfig.apiKey)
 	case common.SecurityTypeApiKey:
-		req.Header.Set("X-MBX-APIKEY", rc.c.apiKey)
+		req.Header.Set("X-MBX-APIKEY", rc.apiConfig.apiKey)
 	case common.SecurityTypeNone:
 	}
 
 	return req, nil
-}
-
-// sign adds "timestamp", "recvWindow", and "signature" to urlValues.
-func (rc *restClient) sign(urlValues *url.Values) {
-	tsMilli := rc.c.th.TSSNow() / 1e6
-	//tsMilli := rc.c.NanotoMilli(rc.c.TSNanoNowServer())
-	urlValues.Add("timestamp", strconv.FormatInt(tsMilli, 10))
-	urlValues.Add("recvWindow", strconv.Itoa(rc.c.recvWindow))
-	queryString := urlValues.Encode()
-
-	mac := hmac.New(sha256.New, []byte(rc.c.apiSecret))
-	mac.Write([]byte(queryString))
-	signature := mac.Sum(nil)
-
-	urlValues.Add("signature", fmt.Sprintf("%x", signature))
 }
 
 // errResponse is a helper struct used to parse binance error responses.
@@ -163,7 +166,28 @@ type errResponse struct {
 	Msg  string `json:"msg"`
 }
 
+// newBadRequestError creates a new common.BadRequestError.
+// It is used when the http response status code is 400 or 401.
+func (rc *restClient) newBadRequestError(statusCode int, errResp *errResponse) error {
+	return &common.BadRequestError{
+		StatusCode: statusCode,
+		ErrorCode:  errResp.Code,
+		Msg:        errResp.Msg,
+	}
+}
+
+// newUnexpectedStatusCodeError creates a new common.UnexpectedStatusCodeError.
+// It is used for all other status codes.
+func (rc *restClient) newUnexpectedStatusCodeError(statusCode int, errResp *errResponse) error {
+	return &common.UnexpectedStatusCodeError{
+		StatusCode: statusCode,
+		ErrorCode:  errResp.Code,
+		Msg:        errResp.Msg,
+	}
+}
+
 // newRetryAfterError creates a new common.RetryAfterError.
+// It is used when the http response status code is 418 or 429.
 func (rc *restClient) newRetryAfterError(
 	tslRetryAt int64, statusCode int, errorCode int, errorMsg string,
 ) error {
@@ -173,7 +197,7 @@ func (rc *restClient) newRetryAfterError(
 		Msg:            errorMsg,
 		Producer:       "server",
 		RetryTimeLocal: time.Unix(0, tslRetryAt),
-		RetryAfter:     int(tslRetryAt-rc.c.th.TSLNow()) / 1e9,
+		RetryAfter:     int(tslRetryAt-rc.th.TSLNow()) / 1e9,
 	}
 }
 
@@ -192,12 +216,28 @@ func (rc *restClient) getRetryTime(srh *common.ServiceResponseHeader) (int64, er
 
 	// calculate and return retry time
 	tssRetryAt := srh.TSSRespHeader + int64(*srh.RetryAfter)*1e9
-	return rc.c.th.TSSToTSL(tssRetryAt), nil
+	return rc.th.TSSToTSL(tssRetryAt), nil
+}
+
+// handleRetryAfterError generates and returns a new common.RetryAfterError.
+// It is used when the http response status code is 418 or 429.
+// Panic if the RetryAfter header has not been parsed. In practice this should
+// never happen, but if it does, there's no point in continuing.
+func (rc *restClient) handleRetryAfterError(
+	statusCode int, srh *common.ServiceResponseHeader, errResp *errResponse) error {
+	tslRetryAt, err := rc.getRetryTime(srh)
+	if err != nil {
+		rc.logger.WithError(err).Panic("handleStatusCode: error calculating retry time")
+	}
+	return rc.newRetryAfterError(tslRetryAt, statusCode, errResp.Code, errResp.Msg)
 }
 
 // handleStatusCode handles the status code returned by the http response, as
 // well as any binance error codes.
-// TODO: implement other status codes and errors
+// If the status code is not OK, it returns one of three errors:
+// * 418, 428: common.RetryAfterError
+// * 400, 401: common.BadRequestError
+// * other: common.UnexpectedStatusCodeError
 func (rc *restClient) handleStatusCode(resp *http.Response, data []byte, sm *common.ServiceMeta) error {
 	// update ServiceMeta status code
 	sm.StatusCode = resp.StatusCode
@@ -208,7 +248,7 @@ func (rc *restClient) handleStatusCode(resp *http.Response, data []byte, sm *com
 	}
 
 	// parse error response. Don't do anything if error response can't be parsed.
-	// if errResp is vital, then it should be handled downstream.
+	// if errResp fields are vital, then it should be handled downstream.
 	errResp := &errResponse{}
 	if err := json.Unmarshal(data, errResp); err != nil {
 		rc.logger.WithField("data", string(data)).Error("handleStatusCode: error unmarshalling error response")
@@ -217,25 +257,13 @@ func (rc *restClient) handleStatusCode(resp *http.Response, data []byte, sm *com
 	// handle status codes
 	switch resp.StatusCode {
 
-	// RetryAfterError (418, 429)
-	case http.StatusTeapot, http.StatusTooManyRequests:
-		tslRetryAt, err := rc.getRetryTime(sm.SRH)
-		if err != nil {
-			// should never happen, but if we can't get retry time, there's not point in continuing
-			rc.logger.WithError(err).Fatal("handleStatusCode: error calculating retry time")
-		}
-		return rc.newRetryAfterError(tslRetryAt, resp.StatusCode, errResp.Code, errResp.Msg)
+	case http.StatusTeapot, http.StatusTooManyRequests: // 418, 429
+		return rc.handleRetryAfterError(resp.StatusCode, sm.SRH, errResp)
 
-	// BadRequestError (400, 401)
-	case http.StatusBadRequest, http.StatusUnauthorized:
+	case http.StatusBadRequest, http.StatusUnauthorized: // 400, 401
+		return rc.newBadRequestError(resp.StatusCode, errResp)
 
-	// UnexpectedStatusCodeError
 	default:
-		rc.logger.WithFields(log.Fields{
-			"status_code": resp.StatusCode,
-			"body":        fmt.Sprintf("%s", data),
-		}).Fatal("Unexpected status code")
+		return rc.newUnexpectedStatusCodeError(resp.StatusCode, errResp) // other
 	}
-
-	return nil
 }

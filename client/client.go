@@ -7,18 +7,28 @@ import (
 
 /* ==================== Client =========================================== */
 
+type APIConfig struct {
+	apiKey     string
+	apiSecret  string
+	recvWindow int
+}
+
 // NewClient
 func NewClient(apiKey string, secretKey string, opts *ClientOptions) *Client {
+	apiConfig := &APIConfig{
+		apiKey:     apiKey,
+		apiSecret:  secretKey,
+		recvWindow: 5000,
+	}
+
 	c := &Client{
-		apiKey:    apiKey,
-		apiSecret: secretKey,
-		logger:    newLogger(opts),
+		logger: newLogger(opts),
 	}
 
 	// add restClient and timeHandler to client
-	c.rc = newRestClient(c)
 	c.th = newTimeHandler(c)
 	c.rlm = newRateLimitManager(opts.RateLimits, c.th, c.logger)
+	c.rc = newRestClient(c.th, c.rlm, apiConfig, c.logger)
 
 	return c
 }
