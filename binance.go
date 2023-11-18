@@ -15,6 +15,9 @@ type Client = client.Client
 // ClientOptions is a convenience wrapper around client.ClientOptions.
 type ClientOptions = client.ClientOptions
 
+// RateLimit is a convenience wrapper around client.RateLimit.
+type RateLimit = client.RateLimit
+
 // ServiceBaseResponse is a convenience wrapper around services.ServiceBaseResponse.
 type ServiceBaseResponse = services.ServiceBaseResponse
 

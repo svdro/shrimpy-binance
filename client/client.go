@@ -1,68 +1,13 @@
 package client
 
 import (
-	"io"
-	"os"
-
 	log "github.com/sirupsen/logrus"
-	"github.com/svdro/shrimpy-binance/common"
 	"github.com/svdro/shrimpy-binance/services"
 )
 
-/* ==================== ClientOptions ==================================== */
-
-// ClientOptions
-type ClientOptions struct {
-	LogReportCaller bool          // default: false
-	LogFormatter    log.Formatter // default: &log.TextFormatter{}
-	LogLevel        log.Level     // default: log.PanicLevel
-	LogOutput       io.Writer     // default: os.Stderr
-}
-
-// DefaultClientOptions returns a new ClientOptions with default values.
-func DefaultClientOptions() *ClientOptions {
-	return &ClientOptions{
-		LogReportCaller: false,
-		LogFormatter: &log.TextFormatter{
-			FullTimestamp:   true,
-			TimestampFormat: "15:04:05.000000",
-		},
-		LogLevel:  log.PanicLevel,
-		LogOutput: os.Stderr,
-	}
-}
-
-/* ==================== ClientUtils ====================================== */
-
-// newLogger returns a new *log.Entry with the given options.
-func newLogger(opts *ClientOptions) *log.Entry {
-
-	logger := log.New()
-
-	if opts.LogFormatter != nil {
-		logger.SetFormatter(opts.LogFormatter)
-	}
-
-	if opts.LogOutput != nil {
-		logger.SetOutput(opts.LogOutput)
-	}
-
-	if opts.LogReportCaller {
-		logger.SetReportCaller(true)
-	}
-
-	logger.SetLevel(opts.LogLevel)
-
-	//logger.SetFormatter(options.formatter)
-	return logger.WithFields(log.Fields{
-		"__package": "shrimpy-binance",
-		"_caller":   "client",
-	})
-}
-
 /* ==================== Client =========================================== */
 
-// a synonym for package that starts on "" is
+// NewClient
 func NewClient(apiKey string, secretKey string, opts *ClientOptions) *Client {
 	c := &Client{
 		apiKey:    apiKey,
@@ -70,38 +15,24 @@ func NewClient(apiKey string, secretKey string, opts *ClientOptions) *Client {
 		logger:    newLogger(opts),
 	}
 
+	// add restClient and timeHandler to client
 	c.rc = newRestClient(c)
 	c.th = newTimeHandler(c)
-	c.rlhs = map[common.BIEndpointType]*rateLimitHandler{
-		common.EndpointTypeAPI:  newRateLimitHandler(c),
-		common.EndpointTypeSAPI: newRateLimitHandler(c),
-		common.EndpointTypeFAPI: newRateLimitHandler(c),
-	}
+	c.rlm = newRateLimitManager(opts.RateLimits, c.th, c.logger)
+
 	return c
 }
 
 // Client is the main entry-point for interacting with shrimpy-binance.
 // It is responsible for creating new REST services and Websocket streams.
 type Client struct {
-	th *timeHandler
-	//rlh    *rateLimitHandler
-	rlhs       map[common.BIEndpointType]*rateLimitHandler // have one for each endpointType
+	th         *timeHandler
+	rlm        *rateLimitManager
 	rc         *restClient
 	apiKey     string
 	apiSecret  string
 	recvWindow int
 	logger     *log.Entry
-}
-
-// getRlh returns the rateLimitHandler associated with endpointType.
-// when rlh with endpointType is not found, panic.
-func (c *Client) getRlh(endpointType common.BIEndpointType) *rateLimitHandler {
-	rlh, ok := c.rlhs[endpointType]
-
-	if !ok {
-		c.logger.Panicf("rateLimitHander with endpointType %s not found", endpointType)
-	}
-	return rlh
 }
 
 /* ==================== API-Services ===================================== */

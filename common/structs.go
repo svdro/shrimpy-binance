@@ -16,24 +16,36 @@ type ServiceDefinition struct {
 	WeightUID           int // UIDLimit
 }
 
-/* ==================== BIResponseHeader ================================= */
+/* ==================== RateLimit ======================================== */
 
-// RateLimitHeader contains used rate limit updates.
-type RateLimitHeader struct {
-	RateLimitType       BIRateLimitType
-	IntervalType        BIRateLimitIntervalType
-	IntervalNum         int
-	IntervalNanoSeconds int64
-	Count               int // weight count
+// RateLimitUpdate is used by ServiceResponseHeader
+// ServiceResponseHeader is used by ServiceMeta,
+// so this should be in common.
+type RateLimitUpdate struct {
+	EndpointType    BIEndpointType
+	RateLimitType   BIRateLimitType
+	IntervalSeconds int
+	Count           int
 }
 
+/* ==================== BIResponseHeader ================================= */
+
+//// RateLimitHeader contains used rate limit updates.
+//type RateLimitHeader struct {
+//RateLimitType       BIRateLimitType
+//IntervalType        BIRateLimitIntervalType
+//IntervalNum         int
+//IntervalNanoSeconds int64
+//Count               int // weight count
+//}
+
 // serviceResponseHeader contains all relevant information from a binance
-// http response's header.
+// http response's header. Optional headers are included as pointers.
 type ServiceResponseHeader struct {
-	Server        string                    // (API, SAPI, FAPI, DAPI, EAPI)
-	TSSRespHeader int64                     // (API, SAPI, FAPI, DAPI, EAPI)
-	UIDLimits     map[int64]RateLimitHeader // (API, SAPI, FAPI, DAPI, EAPI)
-	IPLimits      map[int64]RateLimitHeader // (API, SAPI, FAPI, DAPI, EAPI)
+	Server           string // (API, SAPI, FAPI, DAPI, EAPI)
+	TSSRespHeader    int64  // (API, SAPI, FAPI, DAPI, EAPI)
+	RateLimitUpdates []RateLimitUpdate
+	RetryAfter       *int // (seconds) (API, SAPI, FAPI, DAPI, EAPI)
 }
 
 /* ==================== ServiceMeta ====================================== */

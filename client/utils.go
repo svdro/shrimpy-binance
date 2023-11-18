@@ -12,18 +12,7 @@ import (
 	"github.com/svdro/shrimpy-binance/common"
 )
 
-/* ==================== parseServiceResponseHeader ======================= */
-
-var (
-	reIPLimit        = regexp.MustCompile(`x-mbx-used-weight-\d+[a-z]`)
-	reUIDLimit       = regexp.MustCompile(`x-mbx-order-count-\d+[a-z]`)
-	reSapiIPLimit    = regexp.MustCompile(`x-sapi-used-ip-weight-\d+[a-z]`)
-	reSapiUIDLimit   = regexp.MustCompile(`x-sapi-used-uid-weight-\d+[a-z]`)
-	reIntervalNumber = regexp.MustCompile(`\d`)
-	reIntervalLetter = regexp.MustCompile(`[a-z]$`)
-)
-
-// intervalSecondsMap is used for calclulating nanoseconds from header.
+// intervalSecondsMap is used for calclulating seconds from header.
 var intervalSecondsMap = map[common.BIRateLimitIntervalType]int{
 	common.IntervalSecond: 1,
 	common.IntervalMinute: 60,
@@ -37,11 +26,27 @@ var intervalTypeMap = map[string]common.BIRateLimitIntervalType{
 	"d": common.IntervalDay,
 }
 
+// getSecondsInInterval returns the number of seconds in the given interval.
+func getSecondsInInterval(intervalType common.BIRateLimitIntervalType, intervalNumber int) int {
+	intervalTypeSeconds := intervalSecondsMap[intervalType]
+	intervalSeconds := intervalTypeSeconds * intervalNumber
+	return intervalSeconds
+}
+
+var (
+	reIPLimit        = regexp.MustCompile(`x-mbx-used-weight-(\d+)[a-z]`)
+	reUIDLimit       = regexp.MustCompile(`x-mbx-order-count-(\d+)[a-z]`)
+	reSapiIPLimit    = regexp.MustCompile(`x-sapi-used-ip-weight-\d+[a-z]`)
+	reSapiUIDLimit   = regexp.MustCompile(`x-sapi-used-uid-weight-\d+[a-z]`)
+	reIntervalNumber = regexp.MustCompile(`(\d+)`)
+	reIntervalLetter = regexp.MustCompile(`[a-z]$`)
+)
+
 // parseRateLimitHeader parses the response header key-value pair, and
-// returns a common.RateLimitHeader of BIRateLimitType rateLimitType.
+// returns a common.RateLimitUpdate of BIRateLimitType rateLimitType.
 func parseRateLimitHeader(
-	k, v string, rateLimitType common.BIRateLimitType,
-) (*common.RateLimitHeader, error) {
+	k, v string, rateLimitType common.BIRateLimitType, endpointType common.BIEndpointType,
+) (*common.RateLimitUpdate, error) {
 
 	// parse limit from header value
 	limit, err := strconv.Atoi(v)
@@ -63,26 +68,26 @@ func parseRateLimitHeader(
 		return nil, err
 	}
 
-	// calculate interval nanoseconds
-	intervalTypeSeconds := intervalSecondsMap[intervalTypeMap[intervalLetter]]
-	intervalNanoSeconds := int64(intervalTypeSeconds * intervalNumber * 1e9)
+	// parse interval type and calculate interval nanoseconds
+	intervalType := intervalTypeMap[intervalLetter]
+	intervalSeconds := getSecondsInInterval(intervalType, intervalNumber)
 
-	return &common.RateLimitHeader{
-		RateLimitType:       rateLimitType,
-		IntervalType:        intervalTypeMap[intervalLetter],
-		IntervalNum:         intervalNumber,
-		IntervalNanoSeconds: intervalNanoSeconds,
-		Count:               limit,
+	return &common.RateLimitUpdate{
+		EndpointType:    endpointType,
+		RateLimitType:   rateLimitType,
+		IntervalSeconds: intervalSeconds,
+		Count:           limit,
 	}, nil
 
 }
 
 // parseServiceResponseHeader parses the http response header and returns a
 // common.ServiceResponseHeader.
-func parseServiceResponseHeader(h http.Header) (*common.ServiceResponseHeader, error) {
-	logger := log.WithField("caller", "parseServiceResponseHeader")
-	IPLimits := map[int64]common.RateLimitHeader{}
-	UIDLimits := map[int64]common.RateLimitHeader{}
+func parseServiceResponseHeader(
+	h http.Header, endpointType common.BIEndpointType,
+) (*common.ServiceResponseHeader, error) {
+	logger := log.WithField("_caller", "parseServiceResponseHeader")
+	rateLimitUpdates := []common.RateLimitUpdate{}
 
 	// loop over key value pairs to parse IP & UID limits
 	// this is necessary, because the header keys are not always known.
@@ -91,21 +96,23 @@ func parseServiceResponseHeader(h http.Header) (*common.ServiceResponseHeader, e
 		key := strings.ToLower(k)
 		logger := logger.WithFields(log.Fields{"key": key, "value": value})
 
+		var err error
+		var rlHeader *common.RateLimitUpdate
+
 		switch {
 		case reIPLimit.MatchString(key) || reSapiIPLimit.MatchString(key):
-			rlHeader, err := parseRateLimitHeader(key, value, common.RateLimitTypeIP)
-			if err != nil {
-				logger.WithError(err).Fatal("error parsing IPLimit")
-				continue
-			}
-			IPLimits[rlHeader.IntervalNanoSeconds] = *rlHeader
+			rlHeader, err = parseRateLimitHeader(key, value, common.RateLimitTypeIP, endpointType)
 		case reUIDLimit.MatchString(key) || reSapiUIDLimit.MatchString(key):
-			rlHeader, err := parseRateLimitHeader(key, value, common.RateLimitTypeUID)
-			if err != nil {
-				logger.WithError(err).Fatal("error parsing UIDLimit")
-				continue
-			}
-			UIDLimits[rlHeader.IntervalNanoSeconds] = *rlHeader
+			rlHeader, err = parseRateLimitHeader(key, value, common.RateLimitTypeUID, endpointType)
+		}
+
+		if err != nil {
+			logger.WithError(err).Error("error parsing rate limit header")
+			return nil, err
+		}
+
+		if rlHeader != nil {
+			rateLimitUpdates = append(rateLimitUpdates, *rlHeader)
 		}
 	}
 
@@ -123,12 +130,17 @@ func parseServiceResponseHeader(h http.Header) (*common.ServiceResponseHeader, e
 		return nil, err
 	}
 
-	serverResponseHeader := &common.ServiceResponseHeader{
-		Server:        server,
-		TSSRespHeader: date.UnixNano(),
-		IPLimits:      IPLimits,
-		UIDLimits:     UIDLimits,
+	// make serviceResponseHeader
+	serviceResponseHeader := &common.ServiceResponseHeader{
+		Server:           server,
+		TSSRespHeader:    date.UnixNano(),
+		RateLimitUpdates: rateLimitUpdates,
 	}
 
-	return serverResponseHeader, nil
+	// get retry after header, if included in header
+	if retryAfter, err := strconv.Atoi(h.Get("Retry-After")); err == nil {
+		serviceResponseHeader.RetryAfter = &retryAfter
+	}
+
+	return serviceResponseHeader, nil
 }

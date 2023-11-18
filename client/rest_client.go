@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/svdro/shrimpy-binance/common"
@@ -41,23 +43,20 @@ func (rc *restClient) TimeHandler() common.TimeHandler {
 // All data needed to make the request is contained in ServiceMeta (SD).
 // Any meta data that is created during the request is stored in ServiceMeta.
 func (rc *restClient) Do(ctx context.Context, sm *common.ServiceMeta, p url.Values) ([]byte, error) {
-	rc.logger.Info("Do")
-
-	// fetch rate limit handler, panic if not found
-	sd := sm.SD
-	rlh := rc.c.getRlh(sd.EndpointType)
 
 	// create request/ handle security
-	req, err := rc.createRequest(ctx, &sd, p)
+	req, err := rc.createRequest(ctx, &sm.SD, p)
 	if err != nil {
 		return nil, err
 	}
 
 	// do request
-	resp, err := rc.doRequest(req, &sd, rlh, sm)
+	resp, err := rc.doRequest(req, &sm.SD, sm)
 	if err != nil {
+		rc.logger.WithError(err).Error("Error doing request")
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	// read response body
 	data, err := io.ReadAll(resp.Body)
@@ -66,7 +65,9 @@ func (rc *restClient) Do(ctx context.Context, sm *common.ServiceMeta, p url.Valu
 	}
 
 	// handle status code and binance error codes
-	rc.handleStatusCode(resp, data, sm)
+	if err := rc.handleStatusCode(resp, data, sm); err != nil {
+		return nil, err
+	}
 
 	return data, nil
 }
@@ -75,9 +76,11 @@ func (rc *restClient) Do(ctx context.Context, sm *common.ServiceMeta, p url.Valu
 func (rc *restClient) doRequest(
 	req *http.Request,
 	sd *common.ServiceDefinition,
-	rlh *rateLimitHandler,
 	sm *common.ServiceMeta,
 ) (*http.Response, error) {
+
+	// get rlm
+	rlm := rc.c.rlm
 
 	// record timestamps
 	sm.TSLSent = rc.c.th.TSLNow()
@@ -87,13 +90,12 @@ func (rc *restClient) doRequest(
 		sm.TSSRecv = rc.c.th.TSSNow()
 	}()
 
-	// register pending API call with rate limit handler
-	// return RetryAfterError if request would exceed rate limit
-	err := rlh.RegisterPending(sd)
-	if err != nil {
+	// register pending API call with rateLimitManager
+	// return RetryAfterError if request would exceed the rate limit
+	if err := rlm.RegisterPending(sd); err != nil {
 		return nil, err
 	}
-	defer rlh.UnregisterPending(sd)
+	defer rlm.UnregisterPending(sd)
 
 	// make request
 	resp, err := rc.httpClient.Do(req)
@@ -101,11 +103,12 @@ func (rc *restClient) doRequest(
 		return nil, err
 	}
 
-	// parse response headers, update rate limit handler
-	if sm.SRH, err = parseServiceResponseHeader(resp.Header); err != nil {
+	// parse response headers, update rateLimitManager
+	if sm.SRH, err = parseServiceResponseHeader(resp.Header, sd.EndpointType); err != nil {
 		return nil, err
 	}
-	rlh.UpdateUsed(sm)
+
+	rlm.UpdateUsed(sm.SRH.RateLimitUpdates, sm.SRH.TSSRespHeader)
 
 	return resp, nil
 }
@@ -141,7 +144,7 @@ func (rc *restClient) createRequest(
 
 // sign adds "timestamp", "recvWindow", and "signature" to urlValues.
 func (rc *restClient) sign(urlValues *url.Values) {
-	tsMilli := rc.c.th.TSLNow() / 1e6
+	tsMilli := rc.c.th.TSSNow() / 1e6
 	//tsMilli := rc.c.NanotoMilli(rc.c.TSNanoNowServer())
 	urlValues.Add("timestamp", strconv.FormatInt(tsMilli, 10))
 	urlValues.Add("recvWindow", strconv.Itoa(rc.c.recvWindow))
@@ -154,6 +157,44 @@ func (rc *restClient) sign(urlValues *url.Values) {
 	urlValues.Add("signature", fmt.Sprintf("%x", signature))
 }
 
+// errResponse is a helper struct used to parse binance error responses.
+type errResponse struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+}
+
+// newRetryAfterError creates a new common.RetryAfterError.
+func (rc *restClient) newRetryAfterError(
+	tslRetryAt int64, statusCode int, errorCode int, errorMsg string,
+) error {
+	return &common.RetryAfterError{
+		StatusCode:     statusCode,
+		ErrorCode:      errorCode,
+		Msg:            errorMsg,
+		Producer:       "server",
+		RetryTimeLocal: time.Unix(0, tslRetryAt),
+		RetryAfter:     int(tslRetryAt-rc.c.th.TSLNow()) / 1e9,
+	}
+}
+
+// getRetryTime calculates the the time at which the request should be retried
+// based on the http response header.
+func (rc *restClient) getRetryTime(srh *common.ServiceResponseHeader) (int64, error) {
+	// make sure RetryAfter header has been parsed is not nil
+	if srh.RetryAfter == nil {
+		return 0, fmt.Errorf("calculateRetryTime: srh.RetryAfter is nil")
+	}
+
+	// better safe than sorry
+	if srh.TSSRespHeader == 0 {
+		return 0, fmt.Errorf("calculateRetryTime: srh.TSSRespHeader is 0")
+	}
+
+	// calculate and return retry time
+	tssRetryAt := srh.TSSRespHeader + int64(*srh.RetryAfter)*1e9
+	return rc.c.th.TSSToTSL(tssRetryAt), nil
+}
+
 // handleStatusCode handles the status code returned by the http response, as
 // well as any binance error codes.
 // TODO: implement other status codes and errors
@@ -161,19 +202,31 @@ func (rc *restClient) handleStatusCode(resp *http.Response, data []byte, sm *com
 	// update ServiceMeta status code
 	sm.StatusCode = resp.StatusCode
 
-	// handle status code
+	// don't do anything if status code is OK
+	if resp.StatusCode == http.StatusOK {
+		return nil
+	}
+
+	// parse error response. Don't do anything if error response can't be parsed.
+	// if errResp is vital, then it should be handled downstream.
+	errResp := &errResponse{}
+	if err := json.Unmarshal(data, errResp); err != nil {
+		rc.logger.WithField("data", string(data)).Error("handleStatusCode: error unmarshalling error response")
+	}
+
+	// handle status codes
 	switch resp.StatusCode {
 
-	// ok
-	case http.StatusOK:
+	// RetryAfterError (418, 429)
+	case http.StatusTeapot, http.StatusTooManyRequests:
+		tslRetryAt, err := rc.getRetryTime(sm.SRH)
+		if err != nil {
+			// should never happen, but if we can't get retry time, there's not point in continuing
+			rc.logger.WithError(err).Fatal("handleStatusCode: error calculating retry time")
+		}
+		return rc.newRetryAfterError(tslRetryAt, resp.StatusCode, errResp.Code, errResp.Msg)
 
-	// RetryAfterError
-	case http.StatusTeapot:
-
-	// RetryAfterError
-	case http.StatusTooManyRequests:
-
-	// BadRequestError
+	// BadRequestError (400, 401)
 	case http.StatusBadRequest, http.StatusUnauthorized:
 
 	// UnexpectedStatusCodeError

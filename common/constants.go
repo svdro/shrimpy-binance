@@ -39,7 +39,11 @@ const (
 	SecurityTypeApiKey                       // USER_STREAM, MARKET_DATA
 	SecurityTypeSigned                       // TRADE, MARGIN, USER_DATA
 
-	RateLimitTypeIP  BIRateLimitType = "REQUEST_WEIGHT"
-	RateLimitTypeUID BIRateLimitType = "ORDERS"
-	RateLimitTypeRAW BIRateLimitType = "RAW_REQUESTSLNano"
+	//RateLimitTypeIP  BIRateLimitType = "REQUEST_WEIGHT"
+	//RateLimitTypeUID BIRateLimitType = "ORDERS"
+	//RateLimitTypeRAW BIRateLimitType = "RAW_REQUESTS"
+
+	RateLimitTypeIP  BIRateLimitType = "IP"
+	RateLimitTypeUID BIRateLimitType = "UID"
+	RateLimitTypeRAW BIRateLimitType = "RAW"
 )

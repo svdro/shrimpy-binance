@@ -9,14 +9,22 @@ import (
 
 // RetryAfterError is an error returned when the server returns either a
 // 418 (IP Ban) or 429 (Backoff) status code.
-// rateLimitHandlers can also return this error, if the additional of a new
-// request would exceed the rate limit.
+// A rateLimitManager can also return this error, if executing a request
+// would exceed the rate limit.
+//
+// Fields:
+// StatusCode:     the status code returned by the server
+// RetryTimeLocal: the local time at which the request can be retried
+// RetryAfter:     the number of seconds to wait before retrying
+// Producer:       who produced the error (e.g. "server", "shrimpy-binance")
+// Reason:         the reason for the error (e.g. "IP ban", "backoff")
 type RetryAfterError struct {
-	RetryAfter     int
+	StatusCode     int
+	ErrorCode      int
+	Msg            string
+	Producer       string
 	RetryTimeLocal time.Time // local time
-	//RetryTimeServer time.Time // server time
-	//StatusCode      BIHttpResponseCode
-	//Reason          string
+	RetryAfter     int
 }
 
 func (e *RetryAfterError) Error() string {
