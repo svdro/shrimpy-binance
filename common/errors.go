@@ -5,7 +5,32 @@ import (
 	"time"
 )
 
-/* ==================== Errors =========================================== */
+/* ==================== WS Errors ======================================== */
+
+// WSConnErr is an error returned by client.Stream.Run() when the websocket
+// connection is interrupted. It contains the error returned by the websocket
+// connection, the reason the error occurred, and information on reconnection
+// attempts.
+type WSConnError struct {
+	Err                       error  // error that caused the connection to close
+	Reason                    string // reason for the error
+	ConsecEarlyDisconnects    int    // number of consecutive early disconnects
+	MaxConsecEarlyDisconnects int    // stops reconnecting if this is reached
+	ReconnectionAttempts      int    // number of reconnection attempts
+	MaxReconnectionAttempts   int    // stops reconnecting if this is reached
+	IsTransient               bool   // if true, stream will attempt to reconnect
+}
+
+func (e *WSConnError) Error() string {
+	disconnects := fmt.Sprintf("(%d/%d)", e.ConsecEarlyDisconnects, e.MaxConsecEarlyDisconnects)
+	reconnects := fmt.Sprintf("(%d/%d)", e.ReconnectionAttempts, e.MaxReconnectionAttempts)
+	return fmt.Sprintf(
+		"WSConnError: %s (early disconnects: %s, failed reconnects: %s, transient: %t)",
+		e.Reason, disconnects, reconnects, e.IsTransient,
+	)
+}
+
+/* ==================== REST Errors ====================================== */
 
 // UnexpectedStatusCodeError is an error returned when the server returns a
 // status code that is not expected.

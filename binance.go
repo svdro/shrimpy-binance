@@ -18,6 +18,15 @@ type ClientOptions = client.ClientOptions
 // RateLimit is a convenience wrapper around client.RateLimit.
 type RateLimit = client.RateLimit
 
+// WSConnOptions is a convenience wrapper around client.WSConnOptions.
+type WSConnOptions = client.WSConnOptions
+
+// ReconnectPolicy is a convenience wrapper around client.ReconnectPolicy.
+type ReconnectPolicy = client.ReconnectPolicy
+
+// BackoffPolicy is a convenience wrapper around client.BackoffPolicy.
+type BackoffPolicy = client.BackoffPolicy
+
 // ServiceBaseResponse is a convenience wrapper around services.ServiceBaseResponse.
 type ServiceBaseResponse = services.ServiceBaseResponse
 

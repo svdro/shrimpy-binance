@@ -11,6 +11,8 @@ type BIRateLimitIntervalType string
 type BISecurityType int
 type BIRateLimitType string
 type BIHttpResponseCode int
+type BIWSEndpoint string
+type BIWSSecurityType int
 
 const (
 	DataSourceNone BIDataSource = iota
@@ -39,11 +41,14 @@ const (
 	SecurityTypeApiKey                       // USER_STREAM, MARKET_DATA
 	SecurityTypeSigned                       // TRADE, MARGIN, USER_DATA
 
-	//RateLimitTypeIP  BIRateLimitType = "REQUEST_WEIGHT"
-	//RateLimitTypeUID BIRateLimitType = "ORDERS"
-	//RateLimitTypeRAW BIRateLimitType = "RAW_REQUESTS"
-
 	RateLimitTypeIP  BIRateLimitType = "IP"
 	RateLimitTypeUID BIRateLimitType = "UID"
 	RateLimitTypeRAW BIRateLimitType = "RAW"
+
+	WSEndpointAPI    BIWSEndpoint = "stream.binance.com:9443"
+	WSEndpointFAPI   BIWSEndpoint = "fstream.binance.com"
+	WSAPIEndpointAPI BIWSEndpoint = "ws-api.binance.com:443/ws-api/v3"
+
+	WSSecurityTypeNone BIWSSecurityType = iota
+	WSSecurityTypeListenKey
 )

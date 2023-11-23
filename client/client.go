@@ -3,6 +3,7 @@ package client
 import (
 	log "github.com/sirupsen/logrus"
 	"github.com/svdro/shrimpy-binance/services"
+	"github.com/svdro/shrimpy-binance/streams"
 )
 
 /* ==================== Client =========================================== */
@@ -29,6 +30,7 @@ func NewClient(apiKey string, secretKey string, opts *ClientOptions) *Client {
 	c.th = newTimeHandler(c)
 	c.rlm = newRateLimitManager(opts.RateLimits, c.th, c.logger)
 	c.rc = newRestClient(c.th, c.rlm, apiConfig, c.logger)
+	c.wc = newWsClient(c.th, opts.WSConnOpts, opts.WSDefaultReconnectPolicy, c.logger)
 
 	return c
 }
@@ -36,13 +38,23 @@ func NewClient(apiKey string, secretKey string, opts *ClientOptions) *Client {
 // Client is the main entry-point for interacting with shrimpy-binance.
 // It is responsible for creating new REST services and Websocket streams.
 type Client struct {
-	th         *timeHandler
-	rlm        *rateLimitManager
-	rc         *restClient
-	apiKey     string
-	apiSecret  string
-	recvWindow int
-	logger     *log.Entry
+	th     *timeHandler
+	rlm    *rateLimitManager
+	rc     *restClient
+	wc     *wsClient
+	logger *log.Entry
+}
+
+/* ==================== API-Streams ====================================== */
+
+func (c *Client) NewSpotMarginAggTradesStream() *streams.AggTradesStream {
+	return streams.NewSpotMarginAggTradesStream(c.wc, c.logger)
+}
+
+/* ==================== FAPI-Streams ====================================== */
+
+func (c *Client) NewFuturesAggTradesStream() *streams.AggTradesStream {
+	return streams.NewFuturesAggTradesStream(c.wc, c.logger)
 }
 
 /* ==================== API-Services ===================================== */
