@@ -52,7 +52,7 @@ func (p *wsPump) readPump() {
 	var closeErr error
 
 	defer func() {
-		p.logger.Debugf("exiting readPump")
+		p.logger.Debug("exiting readPump")
 		p.conn.Close()
 		p.errChan <- closeErr
 		close(p.readChan)

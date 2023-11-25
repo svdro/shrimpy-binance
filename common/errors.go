@@ -30,6 +30,19 @@ func (e *WSConnError) Error() string {
 	)
 }
 
+// WSHandlerError is an that should be returned by a StreamHandler when an
+// error occurs. It contains the error that occurred and the reason for the
+// error. If IsFatal is true, the consumer of the error should stop the stream.
+type WSHandlerError struct {
+	Err     error
+	Reason  string
+	IsFatal bool
+}
+
+func (e *WSHandlerError) Error() string {
+	return fmt.Sprintf("WSHandlerError: %s (fatal: %t)", e.Reason, e.IsFatal)
+}
+
 /* ==================== REST Errors ====================================== */
 
 // UnexpectedStatusCodeError is an error returned when the server returns a

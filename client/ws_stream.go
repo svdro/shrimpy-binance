@@ -49,6 +49,7 @@ func incrConsecEarlyDisconnects(current int, t0 time.Time, minConnDuration time.
 type stream struct {
 	handler         common.StreamHandler
 	sm              *common.StreamMeta
+	th              common.TimeHandler
 	connOpts        WSConnOptions
 	reconnectPolicy ReconnectPolicy
 	pathFunc        func() string
@@ -130,8 +131,7 @@ func (s *stream) reconnectWithPolicy(
 		interval = increaseInterval(interval, s.reconnectPolicy.BackoffPolicy)
 	}
 
-	// TODO: this is unreachable, but the compiler doesn't know that.
-	return nil, fmt.Errorf("reconnectWithPolicy: unreachable")
+	return nil, fmt.Errorf("this is unreachable, but the compiler doesn't know that")
 }
 
 // newWSConnError is a utility for reating new WSConnErrors.
@@ -172,11 +172,14 @@ func isTransientConnError(err error) (bool, string) {
 	return false, "unknown error"
 }
 
-// handleError checks if the error is transient (recoverable) and forwards the
-// correct common.WSConnError to the handler. Retruns true if the error is
+// handleConnError checks if the error is transient (recoverable) and forwards
+// the correct common.WSConnError to the handler. Retruns true if the error is
 // transient, reconnectPolicy is enabled, and the maxConsecEarlyDisconnects is
 // not reached, indicating that the stream should attempt to reconnect.
+// Always notify the user with a common.WSConnError.
 func (s *stream) handleConnError(err error, consecEarlyDisconnects int) bool {
+
+	// Check if the error is Transient
 	isTransient, reason := isTransientConnError(err)
 	if !isTransient {
 		s.handler.HandleError(s.newWSConnError(err, reason, consecEarlyDisconnects, 0, false))
@@ -234,9 +237,17 @@ func (s *stream) listen(p *wsPump, ctx context.Context) error {
 			}
 
 			// handle recv
+			// if HandleRecv returns an error, it's always a common.WSHandlerError.
+			// If the error is not fatal, notify the user that it occured, but don't
+			// take any action. If the error is fatal, return it to the caller (Run()).
+			// Run() should shut down the stream and notify the user.
 			s.logger.WithField("msg", string(msg)).Trace("trying to handle recv")
-			s.handler.HandleRecv(msg)
-			s.logger.Trace("handled recv")
+			if err := s.handler.HandleRecv(msg, s.th.TSLNow(), s.th.TSSNow()); err != nil {
+				if err.IsFatal {
+					return err
+				}
+				s.handler.HandleError(err)
+			}
 		}
 	}
 }
@@ -284,12 +295,21 @@ func (s *stream) Run(ctx context.Context) {
 		err = s.listen(s.pump, ctx)
 
 		// incr or reset consecEarlyDisconnects counter based on MinConnDuration
-		incrConsecEarlyDisconnects(consecEarlyDisconnects, t0, s.reconnectPolicy.MinConnDuration)
+		consecEarlyDisconnects = incrConsecEarlyDisconnects(consecEarlyDisconnects, t0, s.reconnectPolicy.MinConnDuration)
 
 		// cleanup s.pump and set it to nil
 		s.cleanupPump()
 
-		// Check if a reconnection attempt should be made, Notify user!
+		// if a common.WSHanlderError is returned, it's always fatal.
+		// shutdown the stream and notify the user.
+		if err, ok := err.(*common.WSHandlerError); ok {
+			s.handler.HandleError(err)
+			return
+		}
+
+		// if it's not a common.WSHandlerError, it's an error that occured in
+		// wsPump, in which case it should be parsed to a common.WSConnError
+		// and handled accordingly.
 		if !s.handleConnError(err, consecEarlyDisconnects) {
 			return
 		}
@@ -314,7 +334,12 @@ func (s *stream) Do(req common.WSRequest) {
 		return
 	}
 
-	s.handler.HandleSend(req)
+	// TODO: this is not necessarily fatal. Make a transient error and put it
+	// on the errChan, but don't shut down run.
+	if err := s.handler.HandleSend(req); err != nil {
+		s.logger.WithError(err).Warn("error handling send")
+		return
+	}
 
 	reqBytes, err := json.Marshal(req)
 	if err != nil {

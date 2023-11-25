@@ -26,11 +26,11 @@ func NewClient(apiKey string, secretKey string, opts *ClientOptions) *Client {
 		logger: newLogger(opts),
 	}
 
-	// add restClient and timeHandler to client
+	// add rateLimitManager, timeHandler, restClient, and wsClient to client
 	c.th = newTimeHandler(c)
 	c.rlm = newRateLimitManager(opts.RateLimits, c.th, c.logger)
 	c.rc = newRestClient(c.th, c.rlm, apiConfig, c.logger)
-	c.wc = newWsClient(c.th, opts.WSConnOpts, opts.WSDefaultReconnectPolicy, c.logger)
+	c.wc = newWSClient(c.th, opts.WSConnOpts, opts.WSDefaultReconnectPolicy, c.logger)
 
 	return c
 }
@@ -45,19 +45,27 @@ type Client struct {
 	logger *log.Entry
 }
 
-/* ==================== API-Streams ====================================== */
+/* ==================== API-Streams Factory ============================== */
 
-func (c *Client) NewSpotMarginAggTradesStream() *streams.AggTradesStream {
+func (c *Client) NewSpotMarginDiffDepth100Stream() *streams.SpotMarginDiffDepthStream {
+	return streams.NewSpotMarginDiffDepth100Stream(c.wc, c.logger)
+}
+
+func (c *Client) NewSpotMarginAggTradesStream() *streams.SpotMarginAggTradesStream {
 	return streams.NewSpotMarginAggTradesStream(c.wc, c.logger)
 }
 
-/* ==================== FAPI-Streams ====================================== */
+/* ==================== FAPI-Streams Factory ============================= */
 
-func (c *Client) NewFuturesAggTradesStream() *streams.AggTradesStream {
+func (c *Client) NewFuturesDiffDepth100Stream() *streams.FuturesDiffDepthStream {
+	return streams.NewFuturesDiffDepth100Stream(c.wc, c.logger)
+}
+
+func (c *Client) NewFuturesAggTradesStream() *streams.FuturesAggTradesStream {
 	return streams.NewFuturesAggTradesStream(c.wc, c.logger)
 }
 
-/* ==================== API-Services ===================================== */
+/* ==================== API-Services Factory ============================= */
 
 func (c *Client) NewSpotMarginPingService() *services.PingService {
 	return services.NewSpotMarginPingService(c.rc, c.logger)
@@ -79,7 +87,7 @@ func (c *Client) NewSpotCloseListenKeyService() *services.CloseListenKeyService 
 	return services.NewSpotCloseListenKeyService(c.rc, c.logger)
 }
 
-/* ==================== SAPI-Services ==================================== */
+/* ==================== SAPI-Services Factory ============================ */
 
 func (c *Client) NewMarginCreateListenKeyService() *services.CreateListenKeyService {
 	return services.NewMarginCreateListenKeyService(c.rc, c.logger)
@@ -93,7 +101,7 @@ func (c *Client) NewMarginCloseListenKeyService() *services.CloseListenKeyServic
 	return services.NewMarginCloseListenKeyService(c.rc, c.logger)
 }
 
-/* ==================== FAPI-Services ==================================== */
+/* ==================== FAPI-Services Factory ============================ */
 
 func (c *Client) NewFuturesPingService() *services.PingService {
 	return services.NewFuturesPingService(c.rc, c.logger)

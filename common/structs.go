@@ -64,6 +64,19 @@ func NewStreamMeta(sd StreamDefinition) *StreamMeta {
 }
 
 // StreamMeta
+// Stream Meta persists over the lifetime of a stream.
+// As such, it cannot be used to store data on individual events.
+// Possibly use this later to collect metadata on a stream (e.g. disconnects,
+// reconnects, etc), and/or use this to configure the (dynamic) stream path.
 type StreamMeta struct {
 	SD StreamDefinition
+}
+
+// StreamEventMeta holds metadata on a single websocket event,
+// such as timestamps.
+type StreamEventMeta struct {
+	TSLRecv int64 // timestamp local received in nanoseconds
+	TSSRecv int64 // timestamp server received in nanoseconds
+	TSLSent int64 // only applicable to requests (stream.DO)
+	TSSent  int64 // only applicable to requests (stream.DO)
 }

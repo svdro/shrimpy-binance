@@ -1,7 +1,6 @@
 package streams
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -9,69 +8,38 @@ import (
 	"github.com/svdro/shrimpy-binance/common"
 )
 
-/* ==================== AggTradesStream ================================== */
+/* ==================== Shared AggTradesStream =========================== */
 
-// AggTradesStream is a websocket stream for aggregate trades.
-type AggTradesStream struct {
+// AggTradesStream is a shared Stream implementation for agg trades streams.
+// It includes a Stream, a handler for market streams, and a symbol for
+// WebSocket communication.
+type AggTradesStream[E Event] struct {
 	common.Stream
-	SM       *common.StreamMeta
-	Handler  *AggTradesHandler
+	Handler  *MarketStreamHandler[E]
 	WSSymbol *string
 }
 
-// SetSymbol sets the symbol of the stream to the provided value,
-// calls SetPathFunc on common.Stream, and returns the stream.
-func (s *AggTradesStream) SetSymbol(restSymbol string) *AggTradesStream {
+// SetSymbol sets the wsSymbol that is used in generating the path for the
+// stream. It also sets the path function for the stream, if all path params
+// are set (in this case wsSymbol is the only param).
+func (s *AggTradesStream[E]) SetSymbol(restSymbol string) *AggTradesStream[E] {
 	wsSymbol := strings.ToLower(restSymbol)
 	s.WSSymbol = &wsSymbol
 	s.SetPathFunc(s.path)
 	return s
 }
 
-// path constructs the path of the stream. Used as a callback in common.Stream.
-func (s *AggTradesStream) path() string {
+// path returns the path for the agg trades stream. It is used as the path
+// function for the stream.
+func (s *AggTradesStream[E]) path() string {
 	path := "/ws/%s@aggTrade"
 	return fmt.Sprintf(path, *s.WSSymbol)
 }
 
-/* ==================== AggTradesEvent (shrimpy-binance/streams) ========= */
+/* ==================== sharedAggTradesEvent ============================= */
 
-func NewAggTradesHandler() *AggTradesHandler {
-	return &AggTradesHandler{
-		EventChan: make(chan AggTradesEvent, 256),
-		ErrChan:   make(chan error, 1),
-	}
-}
-
-type AggTradesHandler struct {
-	EventChan chan AggTradesEvent
-	ErrChan   chan error
-}
-
-func (h *AggTradesHandler) HandleSend(req common.WSRequest) {
-	log.Warn(handleSendWarning)
-}
-
-func (h *AggTradesHandler) HandleError(err error) {
-	//log.WithError(err).Warn("error in streamHandler")
-	h.ErrChan <- err
-}
-
-func (h *AggTradesHandler) HandleRecv(msg []byte) {
-	event := AggTradesEvent{}
-	if err := json.Unmarshal(msg, &event); err != nil {
-		log.Fatalf("error unmarshaling response: %s", err)
-		h.ErrChan <- err
-	}
-	//log.WithField("event", event).Info("handling recv")
-	h.EventChan <- event
-}
-
-/* ==================== AggTradesEvent (shrimpy-binance/streams) ========= */
-
-type AggTradesEvent struct {
-	EventType        string `json:"e"`
-	EventTime        int64  `json:"E"`
+// sharedAggTradesEvent is a shared event for agg trades streams.
+type sharedAggTradesEvent struct {
 	Symbol           string `json:"s"`
 	AggregateTradeID int64  `json:"a"`
 	Price            string `json:"p"`
@@ -80,5 +48,42 @@ type AggTradesEvent struct {
 	LastTradeID      int64  `json:"l"`
 	TradeTime        int64  `json:"T"`
 	IsBuyerMaker     bool   `json:"m"`
-	IsBestMatch      bool   `json:"M"`
 }
+
+/* ==================== SpotMargin ======================================= */
+
+// SpotMarginAggTradesEvent is an agg trades event for spot/margin streams.
+type SpotMarginAggTradesEvent struct {
+	StreamBaseEvent
+	sharedAggTradesEvent
+	Ignore interface{} `json:"M"`
+}
+
+// SpotMarginAggTradesHandler is a handler for spot/margin agg trades streams.
+type SpotMarginAggTradesHandler = MarketStreamHandler[*SpotMarginAggTradesEvent]
+
+// newSpotMarginAggTradesHandler creates a new SpotMarginAggTradesHandler.
+func newSpotMarginAggTradesHandler(logger *log.Entry) *SpotMarginAggTradesHandler {
+	return newMarketStreamHandler[*SpotMarginAggTradesEvent](logger)
+}
+
+// SpotMarginAggTradesStream is a stream for spot/margin agg trades streams.
+type SpotMarginAggTradesStream = AggTradesStream[*SpotMarginAggTradesEvent]
+
+/* ==================== Futures ======================================= */
+
+// FuturesAggTradesEvent is an agg trades event for futures streams.
+type FuturesAggTradesEvent struct {
+	sharedAggTradesEvent
+	StreamBaseEvent
+}
+
+// FuturesAggTradesHandler is a handler for futures agg trades streams.
+type FuturesAggTradesHandler = MarketStreamHandler[*FuturesAggTradesEvent]
+
+func newFuturesAggTradesHandler(logger *log.Entry) *FuturesAggTradesHandler {
+	return newMarketStreamHandler[*FuturesAggTradesEvent](logger)
+}
+
+// FuturesAggTradesStream is a stream for futures agg trades streams.
+type FuturesAggTradesStream = AggTradesStream[*FuturesAggTradesEvent]

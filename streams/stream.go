@@ -5,7 +5,7 @@ import (
 	"github.com/svdro/shrimpy-binance/common"
 )
 
-/* ==================== AggTradesHandler (shrimpy-binance/streams/utils) = */
+/* ==================== constants ========================================= */
 
 const (
 	// most  common.StreamHandlers will not implement HandleSend. Use this.
@@ -29,6 +29,13 @@ var APIStreams = map[string]common.StreamDefinition{
 		SecurityType: common.WSSecurityTypeNone,
 		UpdateSpeed:  100, // 100ms
 	},
+	"depth1000ms": {
+		Scheme:       "wss",
+		Endpoint:     common.WSEndpointAPI,
+		EndpointType: common.EndpointTypeAPI,
+		SecurityType: common.WSSecurityTypeNone,
+		UpdateSpeed:  1000, // 1000ms
+	},
 }
 
 var FAPIStreams = map[string]common.StreamDefinition{
@@ -38,6 +45,13 @@ var FAPIStreams = map[string]common.StreamDefinition{
 		EndpointType: common.EndpointTypeFAPI,
 		SecurityType: common.WSSecurityTypeNone,
 		UpdateSpeed:  0, // Real-time
+	},
+	"depth100ms": {
+		Scheme:       "wss",
+		Endpoint:     common.WSEndpointFAPI,
+		EndpointType: common.EndpointTypeFAPI,
+		SecurityType: common.WSSecurityTypeNone,
+		UpdateSpeed:  100, // 100ms
 	},
 }
 
@@ -51,29 +65,48 @@ var WSAPIStreams = map[string]common.StreamDefinition{
 	},
 }
 
-/* ==================== APIStreams ======================================= */
+/* ==================== APIStreams Factory =============================== */
 
-func NewSpotMarginAggTradesStream(wc common.WSClient, logger *log.Entry) *AggTradesStream {
-	sm := common.NewStreamMeta(APIStreams["aggTrades"])
-	tradesHandler := NewAggTradesHandler()
-	//logger = logger.WithField("_caller", "SpotMarginAggTradesStream")
+func NewSpotMarginDiffDepth100Stream(wc common.WSClient, logger *log.Entry) *SpotMarginDiffDepthStream {
+	sm := common.NewStreamMeta(APIStreams["depth100ms"])
+	handler := newSpotMarginDiffDepthHandler(logger.WithField("_caller", "SpotMarginDiffDepthHandler"))
 
-	return &AggTradesStream{
-		SM:      sm,
-		Handler: tradesHandler,
-		Stream:  wc.NewStream(sm, tradesHandler, logger.WithField("_caller", "SpotMarginAggTradesStream")),
+	return &SpotMarginDiffDepthStream{
+		Handler:     handler,
+		Stream:      wc.NewStream(sm, handler, logger.WithField("_caller", "SpotMarginDiffDepthStream")),
+		UpdateSpeed: &sm.SD.UpdateSpeed, // hardcoded to 100ms
 	}
 }
 
-/* ==================== FAPIStreams ====================================== */
+func NewSpotMarginAggTradesStream(wc common.WSClient, logger *log.Entry) *SpotMarginAggTradesStream {
+	sm := common.NewStreamMeta(APIStreams["aggTrades"])
+	handler := newSpotMarginAggTradesHandler(logger.WithField("_caller", "SpotMarginAggTradesHandler"))
 
-func NewFuturesAggTradesStream(wc common.WSClient, logger *log.Entry) *AggTradesStream {
+	return &SpotMarginAggTradesStream{
+		Handler: handler,
+		Stream:  wc.NewStream(sm, handler, logger.WithField("_caller", "SpotMarginAggTradesStream")),
+	}
+}
+
+/* ==================== FAPIStreams Factory ============================== */
+
+func NewFuturesDiffDepth100Stream(wc common.WSClient, logger *log.Entry) *FuturesDiffDepthStream {
+	sm := common.NewStreamMeta(FAPIStreams["depth100ms"])
+	handler := newFuturesDiffDepthHandler(logger.WithField("_caller", "FuturesDiffDepthHandler"))
+
+	return &FuturesDiffDepthStream{
+		Handler:     handler,
+		Stream:      wc.NewStream(sm, handler, logger.WithField("_caller", "FuturesDiffDepthStream")),
+		UpdateSpeed: &sm.SD.UpdateSpeed,
+	}
+}
+
+func NewFuturesAggTradesStream(wc common.WSClient, logger *log.Entry) *FuturesAggTradesStream {
 	sm := common.NewStreamMeta(FAPIStreams["aggTrades"])
-	tradesHandler := NewAggTradesHandler()
+	handler := newFuturesAggTradesHandler(logger.WithField("_caller", "FuturesAggTradesHandler"))
 
-	return &AggTradesStream{
-		SM:      sm,
-		Handler: tradesHandler,
-		Stream:  wc.NewStream(sm, tradesHandler, logger.WithField("_caller", "FuturesAggTradesStream")),
+	return &FuturesAggTradesStream{
+		Handler: handler,
+		Stream:  wc.NewStream(sm, handler, logger.WithField("_caller", "FuturesAggTradesStream")),
 	}
 }

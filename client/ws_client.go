@@ -1,27 +1,14 @@
 package client
 
 import (
-	"fmt"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/svdro/shrimpy-binance/common"
 )
 
-/* ======================== Errors (shrimpy-binance/common) ============== */
-
-// WSCloseError is an error returned when the websocket is closed
-type WSCloseError struct {
-	Code int
-}
-
-func (e *WSCloseError) Error() string {
-	return fmt.Sprintf("websocket closed with code %d", e.Code)
-}
-
 /* ======================== wsClient ===================================== */
 
 // NewWsClient creates a new wsClient
-func newWsClient(
+func newWSClient(
 	th common.TimeHandler,
 	connOpts WSConnOptions,
 	defaultReconnectPolicy ReconnectPolicy,
@@ -37,7 +24,7 @@ func newWsClient(
 }
 
 // wsClient handles the creation of websocket streams
-// wsClient is essentially a factory for websocket streams
+// this is essentially a factory for websocket streams
 type wsClient struct {
 	th                     common.TimeHandler // needed for creating timestamps
 	connOpts               WSConnOptions      // websocket connection options
@@ -51,6 +38,7 @@ func (wc *wsClient) NewStream(
 	return &stream{
 		handler:         handler,
 		sm:              sm,
+		th:              wc.th,
 		connOpts:        wc.connOpts,
 		reconnectPolicy: wc.defaultReconnectPolicy,
 		pathFunc:        nil,

@@ -10,6 +10,7 @@ import (
 )
 
 /* ==================== ClientOptions ==================================== */
+
 // BackoffPolicy
 type BackoffPolicy struct {
 	InitialInterval time.Duration
@@ -60,6 +61,7 @@ type WSConnOptions struct {
 	WSPingPeriod time.Duration
 }
 
+// TODO: update this (this is currently unusable)
 // DefaultClientOptions returns a new ClientOptions with default values.
 func DefaultClientOptions() *ClientOptions {
 	return &ClientOptions{

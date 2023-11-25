@@ -64,7 +64,7 @@ type ServiceBaseResponse struct {
 func (s *ServiceBaseResponse) ParseBaseResponse(sm *common.ServiceMeta, th common.TimeHandler) error {
 	s.TSLSent = sm.TSLSent
 	s.TSLRecv = sm.TSLRecv
-	s.TSSSent = th.TSLToTSS(sm.TSLSent)
-	s.TSSRecv = th.TSLToTSS(sm.TSLRecv)
+	s.TSSSent = sm.TSSSent
+	s.TSSRecv = sm.TSSRecv
 	return nil
 }

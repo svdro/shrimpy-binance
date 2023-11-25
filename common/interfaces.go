@@ -41,8 +41,8 @@ type WSRequest interface {
 
 // StreamHandler is a handler for websocket events
 type StreamHandler interface {
-	HandleSend(req WSRequest)
-	HandleRecv(msg []byte)
+	HandleSend(req WSRequest) *WSHandlerError
+	HandleRecv(msg []byte, TSLRecv, TSSRecv int64) *WSHandlerError
 	HandleError(err error)
 }
 
