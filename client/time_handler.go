@@ -4,6 +4,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/svdro/shrimpy-binance/common"
 )
 
 /* ==================== timeHandler ====================================== */
@@ -31,23 +32,23 @@ func (th *timeHandler) sync() error {
 }
 
 // TSLNow timestamp loscal now (nanoseconds)
-func (th *timeHandler) TSLNow() int64 {
-	return time.Now().UnixNano()
+func (th *timeHandler) TSLNow() common.TSNano {
+	return common.TSNano(time.Now().UnixNano())
 }
 
 // TSSNow timestamp server now (nanoseconds)
-func (th *timeHandler) TSSNow() int64 {
+func (th *timeHandler) TSSNow() common.TSNano {
 	return th.TSLToTSS(th.TSLNow())
 }
 
 // TSLToTSS timestamp local (nanoseconds) to timestamp server (nanoseconds)
-func (th *timeHandler) TSLToTSS(tsl int64) int64 {
-	return tsl - th.offset
+func (th *timeHandler) TSLToTSS(tsl common.TSNano) common.TSNano {
+	return common.TSNano(tsl.Int64() - th.offset)
 }
 
 // TSSToTSL timestamp server (nanoseconds) to timestamp local (nanoseconds)
-func (th *timeHandler) TSSToTSL(tss int64) int64 {
-	return tss + th.offset
+func (th *timeHandler) TSSToTSL(tss common.TSNano) common.TSNano {
+	return common.TSNano(tss.Int64() + th.offset)
 }
 
 // Offset offset from server time (nanoseconds)

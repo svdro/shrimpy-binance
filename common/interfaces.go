@@ -23,13 +23,23 @@ type WSClient interface {
 	NewStream(sm *StreamMeta, handler StreamHandler, logger *log.Entry) Stream
 }
 
+// countDigitsInInt64 returns the number of digits in an int64.
+func countDigitsInInt64(i int64) int {
+	var count int
+	for i != 0 {
+		i /= 10
+		count++
+	}
+	return count
+}
+
 // TimeHandler
 type TimeHandler interface {
-	TSLNow() int64          // local time in nanoseconds
-	TSSNow() int64          // server time in nanoseconds
-	TSLToTSS(t int64) int64 // local time in nanoseconds to server time in nanoseconds
-	TSSToTSL(t int64) int64 // server time in nanoseconds to local time in nanoseconds
-	Offset() int64          // offset from server time in nanoseconds
+	TSLNow() TSNano           // local time in nanoseconds
+	TSSNow() TSNano           // server time in nanoseconds
+	TSLToTSS(t TSNano) TSNano // local time in nanoseconds to server time in nanoseconds
+	TSSToTSL(t TSNano) TSNano // server time in nanoseconds to local time in nanoseconds
+	Offset() int64            // offset from server time in nanoseconds
 }
 
 /* ==================== Interfaces (shrimpy-binance/common) ============== */
@@ -42,7 +52,7 @@ type WSRequest interface {
 // StreamHandler is a handler for websocket events
 type StreamHandler interface {
 	HandleSend(req WSRequest) *WSHandlerError
-	HandleRecv(msg []byte, TSLRecv, TSSRecv int64) *WSHandlerError
+	HandleRecv(msg []byte, TSLRecv, TSSRecv TSNano) *WSHandlerError
 	HandleError(err error)
 }
 

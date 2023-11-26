@@ -13,7 +13,7 @@ import (
 // ServerTimeResponse
 type ServerTimeResponse struct {
 	ServiceBaseResponse
-	TSSServerTime int64 `json:"serverTime"`
+	TSSServerTime common.TSNano `json:"serverTime"`
 }
 
 // ServerTimeService

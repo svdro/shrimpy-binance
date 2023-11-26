@@ -133,7 +133,7 @@ func parseServiceResponseHeader(
 	// make serviceResponseHeader
 	serviceResponseHeader := &common.ServiceResponseHeader{
 		Server:           server,
-		TSSRespHeader:    date.UnixNano(),
+		TSSRespHeader:    common.TSNano(date.UnixNano()),
 		RateLimitUpdates: rateLimitUpdates,
 	}
 

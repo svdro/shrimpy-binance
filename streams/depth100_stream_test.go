@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/svdro/shrimpy-binance/common"
 )
 
 var (
@@ -19,7 +20,7 @@ var (
 }`)
 
 	apiDepthTarget = &SpotMarginDiffDepthEvent{
-		StreamBaseEvent: StreamBaseEvent{EventType: "depthUpdate", TSSEvent: 123456789},
+		StreamBaseEvent: StreamBaseEvent{EventType: "depthUpdate", TSSEvent: common.NewTSNano(123456789)},
 		sharedDiffDepthEvent: sharedDiffDepthEvent{
 			Symbol:  "BNBBTC",
 			FirstID: 157,
@@ -41,7 +42,7 @@ var (
 }`)
 
 	fapiDepthTarget = &FuturesDiffDepthEvent{
-		StreamBaseEvent: StreamBaseEvent{EventType: "depthUpdate", TSSEvent: 123456789},
+		StreamBaseEvent: StreamBaseEvent{EventType: "depthUpdate", TSSEvent: common.NewTSNano(123456789)},
 		sharedDiffDepthEvent: sharedDiffDepthEvent{
 			Symbol:  "BTCUSDT",
 			FirstID: 157,
@@ -49,7 +50,7 @@ var (
 			Bids:    []Level{{Price: "0.0024", Qty: "10"}},
 			Asks:    []Level{{Price: "0.0026", Qty: "100"}},
 		},
-		TransTime:   123456788,
+		TSSTransact: common.NewTSNano(123456788),
 		LastFinalID: 149,
 	}
 )

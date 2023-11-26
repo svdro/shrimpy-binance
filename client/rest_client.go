@@ -21,6 +21,7 @@ func newRestClient(th common.TimeHandler, rlm *rateLimitManager, apiConfig *APIC
 	return &restClient{
 		th:         th,
 		rlm:        rlm,
+		apiConfig:  apiConfig,
 		httpClient: http.DefaultClient,
 		logger:     logger.WithField("_caller", "restClient"),
 	}
@@ -119,7 +120,7 @@ func (rc *restClient) doRequest(
 // NOTE: the "X-MBX-APIKEY" header is not added here.
 func (rc *restClient) sign(urlValues *url.Values) {
 	// add timestamp and recvWindow to urlValues, encode query string
-	tsMilli := rc.th.TSSNow() / 1e6
+	tsMilli := rc.th.TSSNow().Int64() / 1e6
 	urlValues.Add("timestamp", strconv.FormatInt(tsMilli, 10))
 	urlValues.Add("recvWindow", strconv.Itoa(rc.apiConfig.recvWindow))
 	queryString := urlValues.Encode()
@@ -189,21 +190,21 @@ func (rc *restClient) newUnexpectedStatusCodeError(statusCode int, errResp *errR
 // newRetryAfterError creates a new common.RetryAfterError.
 // It is used when the http response status code is 418 or 429.
 func (rc *restClient) newRetryAfterError(
-	tslRetryAt int64, statusCode int, errorCode int, errorMsg string,
+	tslRetryAt common.TSNano, statusCode int, errorCode int, errorMsg string,
 ) error {
 	return &common.RetryAfterError{
 		StatusCode:     statusCode,
 		ErrorCode:      errorCode,
 		Msg:            errorMsg,
 		Producer:       "server",
-		RetryTimeLocal: time.Unix(0, tslRetryAt),
+		RetryTimeLocal: time.Unix(0, tslRetryAt.Int64()),
 		RetryAfter:     int(tslRetryAt-rc.th.TSLNow()) / 1e9,
 	}
 }
 
 // getRetryTime calculates the the time at which the request should be retried
 // based on the http response header.
-func (rc *restClient) getRetryTime(srh *common.ServiceResponseHeader) (int64, error) {
+func (rc *restClient) getRetryTime(srh *common.ServiceResponseHeader) (common.TSNano, error) {
 	// make sure RetryAfter header has been parsed is not nil
 	if srh.RetryAfter == nil {
 		return 0, fmt.Errorf("calculateRetryTime: srh.RetryAfter is nil")
@@ -215,7 +216,7 @@ func (rc *restClient) getRetryTime(srh *common.ServiceResponseHeader) (int64, er
 	}
 
 	// calculate and return retry time
-	tssRetryAt := srh.TSSRespHeader + int64(*srh.RetryAfter)*1e9
+	tssRetryAt := common.TSNano(srh.TSSRespHeader.Int64() + int64(*srh.RetryAfter)*1e9)
 	return rc.th.TSSToTSL(tssRetryAt), nil
 }
 

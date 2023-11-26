@@ -103,8 +103,8 @@ type SpotMarginDiffDepthStream = DiffDepthStream[*SpotMarginDiffDepthEvent]
 type FuturesDiffDepthEvent struct {
 	StreamBaseEvent
 	sharedDiffDepthEvent
-	TransTime   int64 `json:"T"`  // FAPI
-	LastFinalID int64 `json:"pu"` // FAPI
+	TSSTransact common.TSNano `json:"T"`  // FAPI
+	LastFinalID int64         `json:"pu"` // FAPI
 }
 
 // FuturesDiffDepthHandler is a handler for futures diff depth streams.

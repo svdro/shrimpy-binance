@@ -54,14 +54,15 @@ func (p params) UrlValues() url.Values {
 
 // ServiceBaseResponse holds meta data that is common to all responses.
 type ServiceBaseResponse struct {
-	TSLSent int64
-	TSLRecv int64
-	TSSSent int64
-	TSSRecv int64
+	TSLSent common.TSNano
+	TSLRecv common.TSNano
+	TSSSent common.TSNano
+	TSSRecv common.TSNano
 }
 
 // ParseBaseResponse
-func (s *ServiceBaseResponse) ParseBaseResponse(sm *common.ServiceMeta, th common.TimeHandler) error {
+func (s *ServiceBaseResponse) ParseBaseResponse(
+	sm *common.ServiceMeta, th common.TimeHandler) error {
 	s.TSLSent = sm.TSLSent
 	s.TSLRecv = sm.TSLRecv
 	s.TSSSent = sm.TSSSent

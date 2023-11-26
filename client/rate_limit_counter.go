@@ -78,25 +78,25 @@ type rateLimitCounter struct {
 
 // tssToInterval returns the interval that the given nano timestamp is in.
 // The interval is calculated as the nth interval since the unix epoch.
-func (rlc *rateLimitCounter) tssToInterval(tss int64) int64 {
-	return tss / int64(rlc.intervalSeconds*1e9)
+func (rlc *rateLimitCounter) tssToInterval(tss common.TSNano) int64 {
+	return tss.Int64() / int64(rlc.intervalSeconds*1e9)
 }
 
 // intervalToTSS returns the first nano timestamp that occurs in the given
 // interval. The interval is calculated as the nth interval since the unix
-func (rlc *rateLimitCounter) intervalToTSS(interval int64) int64 {
-	return interval * int64(rlc.intervalSeconds*1e9)
+func (rlc *rateLimitCounter) intervalToTSS(interval int64) common.TSNano {
+	return common.TSNano(interval * int64(rlc.intervalSeconds*1e9))
 }
 
 // newRetryAfterError returns a new common.RetryAfterError.
-func (rlc *rateLimitCounter) newRetryAfterError(tslRetryAt int64, countProjected int) error {
+func (rlc *rateLimitCounter) newRetryAfterError(tslRetryAt common.TSNano, countProjected int) error {
 	reason := fmt.Sprintf("request would exceed limit. (%d/ %d)", countProjected, rlc.limit)
 	return &common.RetryAfterError{
 		StatusCode:     0,
 		ErrorCode:      0,
 		Msg:            reason,
 		Producer:       "shrimpy-binance",
-		RetryTimeLocal: time.Unix(0, tslRetryAt),
+		RetryTimeLocal: time.Unix(0, tslRetryAt.Int64()),
 		RetryAfter:     int(tslRetryAt-rlc.th.TSLNow()) / 1e9,
 	}
 }
@@ -110,7 +110,7 @@ func (rlc *rateLimitCounter) newRetryAfterError(tslRetryAt int64, countProjected
 // is not available (e.g. a WebsocketAPI response), then tssResp should be
 // set to the timestamp (in server time) the request was made, that way we
 // don't accidentally carry over countUsed from a previous interval.
-func (rlc *rateLimitCounter) SetUsed(countUsed int, tssResp int64) {
+func (rlc *rateLimitCounter) SetUsed(countUsed int, tssResp common.TSNano) {
 
 	// lock the mutex (ensure order of operations)
 	rlc.mu.Lock()

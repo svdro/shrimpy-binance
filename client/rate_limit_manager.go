@@ -212,7 +212,7 @@ func (rlm *rateLimitManager) UnregisterPending(sd *common.ServiceDefinition) {
 // If not available, then tssResp should be the timestamp in nanoseconds when
 // the request was made.
 // TODO: think this through more
-func (rlm *rateLimitManager) UpdateUsed(rateLimitUpdates []common.RateLimitUpdate, tssResp int64) {
+func (rlm *rateLimitManager) UpdateUsed(rateLimitUpdates []common.RateLimitUpdate, tssResp common.TSNano) {
 	for _, rlu := range rateLimitUpdates {
 		rlc := rlm.getRLC(rlu.EndpointType, rlu.RateLimitType, rlu.IntervalSeconds)
 		if rlc != nil {

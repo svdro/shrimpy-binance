@@ -43,7 +43,7 @@ func (h *MarketStreamHandler[E]) HandleSend(req common.WSRequest) *common.WSHand
 // If an error occurs, it is logged and returned to the caller. It is then
 // the caller's responsibility to handle the error. In this case stream.Run
 // will put the error on the ErrChan as a non-transient error, and shutdown.
-func (h *MarketStreamHandler[E]) HandleRecv(msg []byte, TSLRecv, TSSRecv int64) *common.WSHandlerError {
+func (h *MarketStreamHandler[E]) HandleRecv(msg []byte, TSLRecv, TSSRecv common.TSNano) *common.WSHandlerError {
 	var event E
 	if err := json.Unmarshal(msg, &event); err != nil {
 		h.logger.WithField("msg", string(msg)).WithError(err).Error("failed to unmarshal event")

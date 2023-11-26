@@ -14,36 +14,36 @@ import (
 // it allows for the time to be set and changed manually as needed.
 type mockTimeHandler struct {
 	offset int64
-	tsl    int64
+	tsl    common.TSNano
 }
 
-func (th *mockTimeHandler) TSLNow() int64 {
+func (th *mockTimeHandler) TSLNow() common.TSNano {
 	return th.tsl
 }
 
-func (th *mockTimeHandler) TSSNow() int64 {
+func (th *mockTimeHandler) TSSNow() common.TSNano {
 	return th.TSLToTSS(th.TSLNow())
 }
 
-func (th *mockTimeHandler) TSLToTSS(tsl int64) int64 {
-	return tsl - th.offset
+func (th *mockTimeHandler) TSLToTSS(tsl common.TSNano) common.TSNano {
+	return common.TSNano(tsl.Int64() - th.offset)
 }
 
-func (th *mockTimeHandler) TSSToTSL(tss int64) int64 {
-	return tss + th.offset
+func (th *mockTimeHandler) TSSToTSL(tss common.TSNano) common.TSNano {
+	return common.TSNano(tss.Int64() + th.offset)
 }
 
 func (th *mockTimeHandler) Offset() int64 {
 	return th.offset
 }
 
-func (th *mockTimeHandler) SetTSL(tsl int64) {
+func (th *mockTimeHandler) SetTSL(tsl common.TSNano) {
 	th.tsl = tsl
 }
 
 func TestIncrementAndDecrementPending(t *testing.T) {
 	tsl := 1700080339 * 1e9 // 19 seconds into the minute
-	th := &mockTimeHandler{tsl: int64(tsl), offset: 0}
+	th := &mockTimeHandler{tsl: common.TSNano(tsl), offset: 0}
 	rlc := newRateLimitCounter(th, common.EndpointTypeAPI, common.RateLimitTypeIP, 60, 6000, log.NewEntry(log.StandardLogger()))
 
 	// Test incrementing countPending
@@ -57,11 +57,11 @@ func TestIncrementAndDecrementPending(t *testing.T) {
 }
 
 type testRetryErrorGenerateionTestCase struct {
-	limit     int   // rate limit, -1 for no limit
-	pending   int   // pending weight to be added
-	tsl0      int64 // current time
-	tsl1      int64 // first timestamp in next interval
-	shouldErr bool  // whether or not a RetryAfterError is expected
+	limit     int           // rate limit, -1 for no limit
+	pending   int           // pending weight to be added
+	tsl0      common.TSNano // current time
+	tsl1      common.TSNano // first timestamp in next interval
+	shouldErr bool          // whether or not a RetryAfterError is expected
 }
 
 func TestRetryErrorGeneration(t *testing.T) {
@@ -75,7 +75,7 @@ func TestRetryErrorGeneration(t *testing.T) {
 	for i, tc := range testCases {
 		name := fmt.Sprintf("i: %d, limit: %d, pending: %d, tsl0: %d, tsl1: %d", i, tc.limit, tc.pending, tc.tsl0, tc.tsl1)
 		t.Run(name, func(t *testing.T) {
-			th := &mockTimeHandler{tsl: int64(tc.tsl0), offset: 0}
+			th := &mockTimeHandler{tsl: common.TSNano(tc.tsl0), offset: 0}
 			rlc := newRateLimitCounter(th, common.EndpointTypeAPI, common.RateLimitTypeIP, 60, tc.limit, log.NewEntry(log.StandardLogger()))
 
 			// increment pending
@@ -102,7 +102,7 @@ func TestRetryErrorGeneration(t *testing.T) {
 }
 
 type testIntervalTransitionTestCase struct {
-	tsl             int64
+	tsl             common.TSNano
 	countUsed       int
 	targetInterval  int64
 	targetCountUsed int
@@ -111,8 +111,8 @@ type testIntervalTransitionTestCase struct {
 
 func TestIntervalTransition(t *testing.T) {
 	// setup the test cases
-	tsl0 := int64(1700080339 * 1e9) // 19 seconds into the minute (current time)
-	tsl1 := int64(1700080380 * 1e9) // 0 seconds into the next minute (start time of next interval)
+	tsl0 := common.TSNano(1700080339 * 1e9) // 19 seconds into the minute (current time)
+	tsl1 := common.TSNano(1700080380 * 1e9) // 0 seconds into the next minute (start time of next interval)
 	testCases := []testIntervalTransitionTestCase{
 		{tsl: tsl0, countUsed: 300, targetInterval: int64(tsl0 / (60 * 1e9)), targetCountUsed: 300}, // setUsed (t0)-> should work
 		{tsl: tsl0, countUsed: 5, targetInterval: int64(tsl0 / (60 * 1e9)), targetCountUsed: 300},   // setUsed (t0) -> should fail
@@ -124,7 +124,7 @@ func TestIntervalTransition(t *testing.T) {
 	// initialize the rate limit counter.
 	// assert that the value of currInterval is 0 after initialization.
 	// NOTE: th is not used in this test, as we are manually setting the tsl in setUsed.
-	th := &mockTimeHandler{tsl: int64(0), offset: int64(0)}
+	th := &mockTimeHandler{tsl: common.TSNano(0), offset: int64(0)}
 	rlc := newRateLimitCounter(th, common.EndpointTypeAPI, common.RateLimitTypeIP, 60, 6000, log.NewEntry(log.StandardLogger()))
 	assert.Equal(t, int64(0), rlc.currInterval)
 
@@ -145,7 +145,7 @@ type testIntervalTransitionConcurrentTestCase struct {
 
 func TestIntervalTransitionConcurrently(t *testing.T) {
 	// setup the test cases
-	tsl0 := int64(1700080339 * 1e9) // 19 seconds into the minute (current time)
+	tsl0 := common.TSNano(1700080339 * 1e9) // 19 seconds into the minute (current time)
 	testCases := []testIntervalTransitionConcurrentTestCase{
 		{countUsed: 45, mockSleepTime: 103}, // setUsed (t4, i2)
 		{countUsed: 17, mockSleepTime: 163}, // setUsed (t5, i3)
@@ -156,23 +156,23 @@ func TestIntervalTransitionConcurrently(t *testing.T) {
 		{countUsed: 14, mockSleepTime: 101}, // setUsed (t4, i2)
 	}
 	maxMockSleepTime := 163
-	targetInterval := int64((tsl0 + int64(maxMockSleepTime*1e9)) / (60 * 1e9))
+	targetInterval := int64((tsl0.Int64() + int64(maxMockSleepTime*1e9)) / (60 * 1e9))
 	targetCountUsed := 17
 
 	// initialize the rate limit counter.
 	// assert that the value of currInterval is 0 after initialization.
 	// NOTE: th is not used in this test, as we are manually setting the tsl in setUsed.
-	th := &mockTimeHandler{tsl: int64(0), offset: int64(0)}
+	th := &mockTimeHandler{tsl: common.TSNano(0), offset: int64(0)}
 	rlc := newRateLimitCounter(th, common.EndpointTypeAPI, common.RateLimitTypeIP, 60, 6000, log.NewEntry(log.StandardLogger()))
 	assert.Equal(t, int64(0), rlc.currInterval)
 
 	wg := &sync.WaitGroup{}
 	for i, tc := range testCases {
-		//time.Sleep(1 * time.Millisecond)
+		// time.Sleep(1 * time.Millisecond)
 		wg.Add(1)
 		go func(i int, tc testIntervalTransitionConcurrentTestCase) {
 			defer wg.Done()
-			tsl := tsl0 + int64(tc.mockSleepTime*1e9)
+			tsl := common.TSNano(tsl0.Int64() + int64(tc.mockSleepTime*1e9))
 			rlc.SetUsed(tc.countUsed, tsl)
 		}(i, tc)
 	}
@@ -183,8 +183,8 @@ func TestIntervalTransitionConcurrently(t *testing.T) {
 }
 
 func TestRateLimitCounter(t *testing.T) {
-	tsl0 := int64(1700080339 * 1e9)                     // 19 seconds into the minute (current time)
-	tsl1 := int64(1700080340 * 1e9)                     // 20 seconds into the next minute (start time of next interval)
+	tsl0 := common.TSNano(1700080339 * 1e9)             // 19 seconds into the minute (current time)
+	tsl1 := common.TSNano(1700080340 * 1e9)             // 20 seconds into the next minute (start time of next interval)
 	th := &mockTimeHandler{tsl: tsl0, offset: int64(0)} // current time is tsl0
 
 	// initialize the rate limit counter.

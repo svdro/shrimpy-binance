@@ -46,7 +46,7 @@ type sharedAggTradesEvent struct {
 	Quantity         string `json:"q"`
 	FirstTradeID     int64  `json:"f"`
 	LastTradeID      int64  `json:"l"`
-	TradeTime        int64  `json:"T"`
+	TSSTrade         int64  `json:"T"` // this is in milli seconds
 	IsBuyerMaker     bool   `json:"m"`
 }
 
