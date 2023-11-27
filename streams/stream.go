@@ -36,6 +36,23 @@ var APIStreams = map[string]common.StreamDefinition{
 		SecurityType: common.WSSecurityTypeNone,
 		UpdateSpeed:  1000, // 1000ms
 	},
+	"userDataStream": {
+		Scheme:       "wss",
+		Endpoint:     common.WSEndpointAPI,
+		EndpointType: common.EndpointTypeAPI,
+		SecurityType: common.WSSecurityTypeNone,
+		UpdateSpeed:  0, // Real-time
+	},
+}
+
+var SAPIStreams = map[string]common.StreamDefinition{
+	"userDataStream": {
+		Scheme:       "wss",
+		Endpoint:     common.WSEndpointAPI,
+		EndpointType: common.EndpointTypeSAPI,
+		SecurityType: common.WSSecurityTypeNone,
+		UpdateSpeed:  0, // Real-time
+	},
 }
 
 var FAPIStreams = map[string]common.StreamDefinition{
@@ -67,6 +84,15 @@ var WSAPIStreams = map[string]common.StreamDefinition{
 
 /* ==================== APIStreams Factory =============================== */
 
+func NewSpotUserDataStream(wc common.WSClient, logger *log.Entry) *SpotUserDataStream {
+	sm := common.NewStreamMeta(APIStreams["userDataStream"])
+	handler := newSpotUserDataStreamHandler(logger.WithField("_caller", "SpotUserDataHandler"))
+	return &SpotUserDataStream{
+		Handler: handler,
+		Stream:  wc.NewStream(sm, handler, logger.WithField("_caller", "SpotUserDataStream")),
+	}
+}
+
 func NewSpotMarginDiffDepth100Stream(wc common.WSClient, logger *log.Entry) *SpotMarginDiffDepthStream {
 	sm := common.NewStreamMeta(APIStreams["depth100ms"])
 	handler := newSpotMarginDiffDepthHandler(logger.WithField("_caller", "SpotMarginDiffDepthHandler"))
@@ -85,6 +111,17 @@ func NewSpotMarginAggTradesStream(wc common.WSClient, logger *log.Entry) *SpotMa
 	return &SpotMarginAggTradesStream{
 		Handler: handler,
 		Stream:  wc.NewStream(sm, handler, logger.WithField("_caller", "SpotMarginAggTradesStream")),
+	}
+}
+
+/* ==================== SAPIStreams Factory ============================== */
+
+func NewMarginUserDataStream(wc common.WSClient, logger *log.Entry) *MarginUserDataStream {
+	sm := common.NewStreamMeta(SAPIStreams["userDataStream"])
+	handler := newMarginUserDataStreamHandler(logger.WithField("_caller", "MarginUserDataHandler"))
+	return &MarginUserDataStream{
+		Handler: handler,
+		Stream:  wc.NewStream(sm, handler, logger.WithField("_caller", "MarginUserDataStream")),
 	}
 }
 

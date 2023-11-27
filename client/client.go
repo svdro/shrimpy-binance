@@ -47,12 +47,22 @@ type Client struct {
 
 /* ==================== API-Streams Factory ============================== */
 
+func (c *Client) NewSpotUserDataStream() *streams.SpotUserDataStream {
+	return streams.NewSpotUserDataStream(c.wc, c.logger)
+}
+
 func (c *Client) NewSpotMarginDiffDepth100Stream() *streams.SpotMarginDiffDepthStream {
 	return streams.NewSpotMarginDiffDepth100Stream(c.wc, c.logger)
 }
 
 func (c *Client) NewSpotMarginAggTradesStream() *streams.SpotMarginAggTradesStream {
 	return streams.NewSpotMarginAggTradesStream(c.wc, c.logger)
+}
+
+/* ==================== SAPI-Streams Factory ============================= */
+
+func (c *Client) NewMarginUserDataStream() *streams.MarginUserDataStream {
+	return streams.NewMarginUserDataStream(c.wc, c.logger)
 }
 
 /* ==================== FAPI-Streams Factory ============================= */

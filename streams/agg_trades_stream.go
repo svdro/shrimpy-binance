@@ -40,14 +40,14 @@ func (s *AggTradesStream[E]) path() string {
 
 // sharedAggTradesEvent is a shared event for agg trades streams.
 type sharedAggTradesEvent struct {
-	Symbol           string `json:"s"`
-	AggregateTradeID int64  `json:"a"`
-	Price            string `json:"p"`
-	Quantity         string `json:"q"`
-	FirstTradeID     int64  `json:"f"`
-	LastTradeID      int64  `json:"l"`
-	TSSTrade         int64  `json:"T"` // this is in milli seconds
-	IsBuyerMaker     bool   `json:"m"`
+	Symbol           string        `json:"s"`
+	AggregateTradeID int64         `json:"a"`
+	Price            string        `json:"p"`
+	Quantity         string        `json:"q"`
+	FirstTradeID     int64         `json:"f"`
+	LastTradeID      int64         `json:"l"`
+	TSSTrade         common.TSNano `json:"T"`
+	IsBuyerMaker     bool          `json:"m"`
 }
 
 /* ==================== SpotMargin ======================================= */

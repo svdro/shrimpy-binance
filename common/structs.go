@@ -1,6 +1,9 @@
 package common
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 /* ==================== Custom Types ===================================== */
 
@@ -13,6 +16,7 @@ func NewTSNano(ts int64) TSNano {
 	for i := 0; i < pow; i++ {
 		ts *= 10
 	}
+
 	return TSNano(ts)
 }
 
@@ -26,7 +30,13 @@ func (ts TSNano) Int64() int64 {
 	return int64(ts)
 }
 
+func (ts TSNano) String() string {
+	return time.Unix(0, ts.Int64()).Format("15:04:05.0000")
+	//return time.Unix(0, ts.Int64()).UTC().Format(time.RFC3339Nano)
+}
+
 // UnmarshalJSON always unmarshals timestamps to nanoseconds.
+// TODO: how does json.Unmarshal handle timestamps that are not in the message?
 func (ts *TSNano) UnmarshalJSON(data []byte) error {
 	var tsTmp int64
 	if err := json.Unmarshal(data, &tsTmp); err != nil {
@@ -117,5 +127,5 @@ type StreamEventMeta struct {
 	TSLRecv TSNano // timestamp local received in nanoseconds
 	TSSRecv TSNano // timestamp server received in nanoseconds
 	TSLSent TSNano // only applicable to requests (stream.DO)
-	TSSent  TSNano // only applicable to requests (stream.DO)
+	TSSSent TSNano // only applicable to requests (stream.DO)
 }

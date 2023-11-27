@@ -36,7 +36,7 @@ func (s *DiffDepthStream[E]) SetSymbol(restSymbol string) *DiffDepthStream[E] {
 func (s *DiffDepthStream[E]) path() string {
 	//path := "/ws/%s@depth@100ms"
 	path := "/ws/%s@depth@%dms"
-	log.Info("path: ", fmt.Sprintf(path, *s.WSSymbol, s.UpdateSpeed))
+	log.Info("path: ", fmt.Sprintf(path, *s.WSSymbol, *s.UpdateSpeed))
 	return fmt.Sprintf(path, *s.WSSymbol, *s.UpdateSpeed)
 }
 
