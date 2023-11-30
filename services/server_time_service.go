@@ -31,16 +31,12 @@ func (s *ServerTimeService) toParams() *params {
 // parseResponse parses the request response into the ServerTimeResponse struct.
 func (s *ServerTimeService) parseResponse(data []byte) (*ServerTimeResponse, error) {
 	resp := &ServerTimeResponse{}
-	if err := resp.ParseBaseResponse(&s.SM, s.rc.TimeHandler()); err != nil {
+	if err := resp.ParseBaseResponse(&s.SM); err != nil {
 		return nil, err
 	}
 
-	if err := json.Unmarshal(data, resp); err != nil {
-		return nil, err
-	}
-
-	resp.TSSServerTime = resp.TSSServerTime * 1e6 // convert to nanoseconds
-	return resp, nil
+	err := json.Unmarshal(data, resp)
+	return resp, err
 }
 
 // Do does the ServerTime request.

@@ -61,6 +61,8 @@ type WSConnOptions struct {
 	WSPingPeriod time.Duration
 }
 
+/* ==================== DefaultClientOptions ============================= */
+
 // TODO: update this (this is currently unusable)
 // DefaultClientOptions returns a new ClientOptions with default values.
 func DefaultClientOptions() *ClientOptions {

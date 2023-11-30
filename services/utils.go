@@ -61,8 +61,7 @@ type ServiceBaseResponse struct {
 }
 
 // ParseBaseResponse
-func (s *ServiceBaseResponse) ParseBaseResponse(
-	sm *common.ServiceMeta, th common.TimeHandler) error {
+func (s *ServiceBaseResponse) ParseBaseResponse(sm *common.ServiceMeta) error {
 	s.TSLSent = sm.TSLSent
 	s.TSLRecv = sm.TSLRecv
 	s.TSSSent = sm.TSSSent

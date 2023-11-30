@@ -45,6 +45,14 @@ type Client struct {
 	logger *log.Entry
 }
 
+func (c *Client) SetServerTimeOffset(offset int64) {
+	c.th.setServerTimeOffset(offset)
+}
+
+func (c *Client) GetServerTimeOffset() int64 {
+	return c.th.getServerTimeOffset()
+}
+
 /* ==================== API-Streams Factory ============================== */
 
 func (c *Client) NewSpotUserDataStream() *streams.SpotUserDataStream {

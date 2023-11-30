@@ -61,7 +61,7 @@ type testRetryErrorGenerateionTestCase struct {
 	pending   int           // pending weight to be added
 	tsl0      common.TSNano // current time
 	tsl1      common.TSNano // first timestamp in next interval
-	shouldErr bool          // whether or not a RetryAfterError is expected
+	shouldErr bool          // whether or not a RateLimitError is expected
 }
 
 func TestRetryErrorGeneration(t *testing.T) {
@@ -90,12 +90,12 @@ func TestRetryErrorGeneration(t *testing.T) {
 
 			// Assert the type and the content of the error
 			deltaSeconds := int((tc.tsl1 - tc.tsl0) / 1e9)
-			if retryErr, ok := err.(*common.RetryAfterError); ok {
+			if retryErr, ok := err.(*common.RateLimitError); ok {
 				assert.Equal(t, "shrimpy-binance", retryErr.Producer)
 				assert.Equal(t, retryErr.RetryAfter, deltaSeconds)
 				assert.Equal(t, retryErr.RetryTimeLocal.UnixNano(), int64(tc.tsl1))
 			} else {
-				t.Errorf("Expected error type *common.RetryAfterError, got %T", err)
+				t.Errorf("Expected error type *common.RateLimitError, got %T", err)
 			}
 		})
 	}

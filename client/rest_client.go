@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -17,12 +18,21 @@ import (
 )
 
 // newRestClient creates a new restClient.
+// TODO: make http.Client configurable
 func newRestClient(th common.TimeHandler, rlm *rateLimitManager, apiConfig *APIConfig, logger *log.Entry) *restClient {
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConns:    0,
+			IdleConnTimeout: 0,
+		},
+		Timeout: 3 * time.Second,
+	}
+
 	return &restClient{
 		th:         th,
 		rlm:        rlm,
 		apiConfig:  apiConfig,
-		httpClient: http.DefaultClient,
+		httpClient: httpClient,
 		logger:     logger.WithField("_caller", "restClient"),
 	}
 }
@@ -34,13 +44,6 @@ type restClient struct {
 	apiConfig  *APIConfig
 	httpClient *http.Client
 	logger     *log.Entry
-}
-
-// TimeHandler returns the TimeHandler associated with Client.
-// This is needed when a service that uses the restClient needs to
-// access the TimeHandler.
-func (rc *restClient) TimeHandler() common.TimeHandler {
-	return rc.th
 }
 
 // Do makes an http request to a binance REST API.
@@ -94,7 +97,7 @@ func (rc *restClient) doRequest(
 	}()
 
 	// register pending API call with rateLimitManager
-	// return RetryAfterError if request would exceed the rate limit
+	// return RateLimitError if request would exceed the rate limit
 	if err := rc.rlm.RegisterPending(sd); err != nil {
 		return nil, err
 	}
@@ -103,6 +106,9 @@ func (rc *restClient) doRequest(
 	// make request
 	resp, err := rc.httpClient.Do(req)
 	if err != nil {
+		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+			rc.logger.WithError(err).Error("Timeout doing request")
+		}
 		return nil, err
 	}
 
@@ -187,12 +193,12 @@ func (rc *restClient) newUnexpectedStatusCodeError(statusCode int, errResp *errR
 	}
 }
 
-// newRetryAfterError creates a new common.RetryAfterError.
+// newRateLimitError creates a new common.RateLimitError.
 // It is used when the http response status code is 418 or 429.
-func (rc *restClient) newRetryAfterError(
+func (rc *restClient) newRateLimitError(
 	tslRetryAt common.TSNano, statusCode int, errorCode int, errorMsg string,
 ) error {
-	return &common.RetryAfterError{
+	return &common.RateLimitError{
 		StatusCode:     statusCode,
 		ErrorCode:      errorCode,
 		Msg:            errorMsg,
@@ -220,23 +226,23 @@ func (rc *restClient) getRetryTime(srh *common.ServiceResponseHeader) (common.TS
 	return rc.th.TSSToTSL(tssRetryAt), nil
 }
 
-// handleRetryAfterError generates and returns a new common.RetryAfterError.
+// handleRateLimitError generates and returns a new common.RateLimitError.
 // It is used when the http response status code is 418 or 429.
 // Panic if the RetryAfter header has not been parsed. In practice this should
 // never happen, but if it does, there's no point in continuing.
-func (rc *restClient) handleRetryAfterError(
+func (rc *restClient) handleRateLimitError(
 	statusCode int, srh *common.ServiceResponseHeader, errResp *errResponse) error {
 	tslRetryAt, err := rc.getRetryTime(srh)
 	if err != nil {
 		rc.logger.WithError(err).Panic("handleStatusCode: error calculating retry time")
 	}
-	return rc.newRetryAfterError(tslRetryAt, statusCode, errResp.Code, errResp.Msg)
+	return rc.newRateLimitError(tslRetryAt, statusCode, errResp.Code, errResp.Msg)
 }
 
 // handleStatusCode handles the status code returned by the http response, as
 // well as any binance error codes.
 // If the status code is not OK, it returns one of three errors:
-// * 418, 428: common.RetryAfterError
+// * 418, 428: common.RateLimitError
 // * 400, 401: common.BadRequestError
 // * other: common.UnexpectedStatusCodeError
 func (rc *restClient) handleStatusCode(resp *http.Response, data []byte, sm *common.ServiceMeta) error {
@@ -259,7 +265,7 @@ func (rc *restClient) handleStatusCode(resp *http.Response, data []byte, sm *com
 	switch resp.StatusCode {
 
 	case http.StatusTeapot, http.StatusTooManyRequests: // 418, 429
-		return rc.handleRetryAfterError(resp.StatusCode, sm.SRH, errResp)
+		return rc.handleRateLimitError(resp.StatusCode, sm.SRH, errResp)
 
 	case http.StatusBadRequest, http.StatusUnauthorized: // 400, 401
 		return rc.newBadRequestError(resp.StatusCode, errResp)

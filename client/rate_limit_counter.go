@@ -55,7 +55,7 @@ func newRateLimitCounter(
 // the same amount, and countUsed is updated based on the value returned in
 // the response header.
 // If doing the request would exceed the rate limit, then countPending is not
-// incremented, and a RetryAfterError is returned, signaling to the caller
+// incremented, and a RateLimitError is returned, signaling to the caller
 // that the request should be retried at the time specified in the error.
 //
 // Mutex:
@@ -88,10 +88,10 @@ func (rlc *rateLimitCounter) intervalToTSS(interval int64) common.TSNano {
 	return common.TSNano(interval * int64(rlc.intervalSeconds*1e9))
 }
 
-// newRetryAfterError returns a new common.RetryAfterError.
-func (rlc *rateLimitCounter) newRetryAfterError(tslRetryAt common.TSNano, countProjected int) error {
+// newRateLimitError returns a new common.RateLimitError.
+func (rlc *rateLimitCounter) newRateLimitError(tslRetryAt common.TSNano, countProjected int) error {
 	reason := fmt.Sprintf("request would exceed limit. (%d/ %d)", countProjected, rlc.limit)
-	return &common.RetryAfterError{
+	return &common.RateLimitError{
 		StatusCode:     0,
 		ErrorCode:      0,
 		Msg:            reason,
@@ -155,7 +155,7 @@ func (rlc *rateLimitCounter) SetUsed(countUsed int, tssResp common.TSNano) {
 }
 
 // IncrementPending increments the countPending by incrPending. If the
-// projected count exceeds the limit, a RetryAfterError is returned.
+// projected count exceeds the limit, a RateLimitError is returned.
 //
 // When calculating the projected count, we need to first check if we're still
 // in the same interval. If we're already in a new interval, then we can
@@ -197,14 +197,14 @@ func (rlc *rateLimitCounter) IncrementPending(incrPending int) error {
 		countUsed = 0
 	}
 
-	// calculate projected count. Return a RetryAfterError if the projected
+	// calculate projected count. Return a RateLimitError if the projected
 	// count exceeds the limit.
 	countProjected := countUsed + rlc.countPending + incrPending
 	logger = logger.WithField("countProjected", countProjected)
 	if countProjected > rlc.limit {
 		tssRetryAt := rlc.intervalToTSS(currInterval + 1)
 		tslRetryAt := rlc.th.TSSToTSL(tssRetryAt)
-		err := rlc.newRetryAfterError(tslRetryAt, countProjected)
+		err := rlc.newRateLimitError(tslRetryAt, countProjected)
 		logger.WithError(err).Warn("IncrementPending: countProjected > rlc.limit")
 		return err
 	}

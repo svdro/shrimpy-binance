@@ -7,30 +7,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-/* ==================== Interfaces ======================================= */
+/* ==================== Interfaces (shrimpy-binance/client) ============== */
 
 // Client
-type Client interface{}
+type Client interface {
+	SetServerTimeOffset(offset int64)
+	GetServerTimeOffset() int64
+}
 
 // RESTClient
 type RESTClient interface {
 	Do(ctx context.Context, sm *ServiceMeta, p url.Values) ([]byte, error)
-	TimeHandler() TimeHandler
 }
 
 // WSClient
 type WSClient interface {
 	NewStream(sm *StreamMeta, handler StreamHandler, logger *log.Entry) Stream
-}
-
-// countDigitsInInt64 returns the number of digits in an int64.
-func countDigitsInInt64(i int64) int {
-	var count int
-	for i != 0 {
-		i /= 10
-		count++
-	}
-	return count
 }
 
 // TimeHandler

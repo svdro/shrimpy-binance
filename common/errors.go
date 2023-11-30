@@ -58,7 +58,7 @@ func (e *UnexpectedStatusCodeError) Error() string {
 	return fmt.Sprintf("Unexpected Status Code (code: %d, msg: %s)", e.StatusCode, e.Msg)
 }
 
-// RetryAfterError is an error returned when the server returns either a
+// RateLimitError is an error returned when the server returns either a
 // 418 (IP Ban) or 429 (Backoff) status code.
 // A rateLimitManager can also return this error, if executing a request
 // would exceed the rate limit.
@@ -69,7 +69,7 @@ func (e *UnexpectedStatusCodeError) Error() string {
 // RetryAfter:     the number of seconds to wait before retrying
 // Producer:       who produced the error (e.g. "server", "shrimpy-binance")
 // Reason:         the reason for the error (e.g. "IP ban", "backoff")
-type RetryAfterError struct {
+type RateLimitError struct {
 	StatusCode     int
 	ErrorCode      int
 	Msg            string
@@ -78,7 +78,7 @@ type RetryAfterError struct {
 	RetryAfter     int
 }
 
-func (e *RetryAfterError) Error() string {
+func (e *RateLimitError) Error() string {
 	return fmt.Sprintf("Retry after %d seconds @ %s local time", e.RetryAfter, e.RetryTimeLocal)
 }
 

@@ -54,7 +54,7 @@ func newRateLimitManager(
 // all endpoints, rate limit types, and intervals.
 // when a request is made, the rateLimitManager is used to register the
 // request as pending. If the request would exceed the rate limit, then
-// the request is not registered, and a RetryAfterError is returned.
+// the request is not registered, and a RateLimitError is returned.
 // If the request is successful, then the rateLimitManager is used to
 // update the used count for all rate limits that receive updates in the
 // response header.
@@ -158,14 +158,14 @@ func (rlm *rateLimitManager) getRLCs(
 // RegisterPending registers pending requests for all rateLimitCounters that
 // are associated with the provided ServiceDefinition.
 // If registering a request would exceed the limit for any rateLimitCounter,
-// all pending counts are rolled back and a RetryAfterError is returned.
+// all pending counts are rolled back and a RateLimitError is returned.
 // TODO: add RAW limits
 func (rlm *rateLimitManager) RegisterPending(sd *common.ServiceDefinition) error {
 	rlm.logger.WithFields(log.Fields{
 		"endpointType": sd.EndpointType,
 		"weightIP":     sd.WeightIP,
 		"weightUID":    sd.WeightUID,
-	}).Info("RegisterPending")
+	}).Debug("RegisterPending")
 	countsPending := []countPending{}
 
 	// IP Limits

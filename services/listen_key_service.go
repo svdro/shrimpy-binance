@@ -31,7 +31,7 @@ func (s *CreateListenKeyService) toParams() *params {
 // parseResponse parses the request response into the CreateListenKeyResponse struct.
 func (s *CreateListenKeyService) parseResponse(data []byte) (*CreateListenKeyResponse, error) {
 	resp := &CreateListenKeyResponse{}
-	if err := resp.ParseBaseResponse(&s.SM, s.rc.TimeHandler()); err != nil {
+	if err := resp.ParseBaseResponse(&s.SM); err != nil {
 		return nil, err
 	}
 
@@ -90,7 +90,7 @@ func (s *PingListenKeyService) toParams() *params {
 // parseResponse parses the request response into the PingListenKeyResponse struct.
 func (s *PingListenKeyService) parseResponse(data []byte) (*PingListenKeyResponse, error) {
 	resp := &PingListenKeyResponse{}
-	if err := resp.ParseBaseResponse(&s.SM, s.rc.TimeHandler()); err != nil {
+	if err := resp.ParseBaseResponse(&s.SM); err != nil {
 		return nil, err
 	}
 	return resp, nil
@@ -143,7 +143,7 @@ func (s *CloseListenKeyService) toParams() *params {
 // parseResponse parses the request response into the CloseListenKeyResponse struct.
 func (s *CloseListenKeyService) parseResponse(data []byte) (*CloseListenKeyResponse, error) {
 	resp := &CloseListenKeyResponse{}
-	if err := resp.ParseBaseResponse(&s.SM, s.rc.TimeHandler()); err != nil {
+	if err := resp.ParseBaseResponse(&s.SM); err != nil {
 		return nil, err
 	}
 	return resp, nil

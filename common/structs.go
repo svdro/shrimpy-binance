@@ -7,6 +7,16 @@ import (
 
 /* ==================== Custom Types ===================================== */
 
+// countDigitsInInt64 returns the number of digits in an int64.
+func countDigitsInInt64(i int64) int {
+	var count int
+	for i != 0 {
+		i /= 10
+		count++
+	}
+	return count
+}
+
 // newTSNano creates a new TSNano from any int64 that represents a timestamp.
 func NewTSNano(ts int64) TSNano {
 	n := countDigitsInInt64(ts)

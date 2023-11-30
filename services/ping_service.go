@@ -45,7 +45,7 @@ func (s *PingService) Do(ctx context.Context) (*PingResponse, error) {
 // parseResponse parses the request response into the PingResponse struct.
 func (s *PingService) parseResponse(data []byte) (*PingResponse, error) {
 	resp := &PingResponse{}
-	if err := resp.ParseBaseResponse(&s.SM, s.rc.TimeHandler()); err != nil {
+	if err := resp.ParseBaseResponse(&s.SM); err != nil {
 		return nil, err
 	}
 	return resp, nil
