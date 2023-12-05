@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -47,15 +48,53 @@ func incrConsecEarlyDisconnects(current int, t0 time.Time, minConnDuration time.
 
 // stream implements the common.Stream interface.
 type stream struct {
-	handler         common.StreamHandler
-	sm              *common.StreamMeta
-	th              common.TimeHandler
-	connOpts        WSConnOptions
-	reconnectPolicy ReconnectPolicy
-	pathFunc        func() string
-	pump            *wsPump
-	isRunning       bool
-	logger          *log.Entry
+	mu               sync.Mutex
+	handler          common.StreamHandler
+	sm               *common.StreamMeta
+	th               common.TimeHandler
+	connOpts         WSConnOptions
+	reconnectPolicy  ReconnectPolicy
+	pathFunc         func() string
+	pump             *wsPump
+	isConnectingChan chan struct{}
+	isConnected      bool
+	isRunning        bool
+	logger           *log.Entry
+}
+
+func (s *stream) getIsConnectedStatus() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.isConnected
+}
+
+func (s *stream) getIsConnectingChan() (chan struct{}, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.isConnectingChan, s.isConnectingChan != nil
+}
+
+func (s *stream) openIsConnectingChan() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.isConnected = false
+	if s.isConnectingChan != nil {
+		s.logger.Error("isConnectingChan is not nil. This should never happen")
+	}
+	s.isConnectingChan = make(chan struct{})
+}
+
+func (s *stream) closeIsConnectingChan(isConnected bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.isConnected = isConnected
+	if s.isConnectingChan == nil {
+		s.logger.Error("isConnectingChan is nil. This should never happen")
+		return
+	}
+	close(s.isConnectingChan)
+	s.isConnectingChan = nil
 }
 
 // SetPathFunc sets the pathFunc of the stream. This is necessary because
@@ -79,12 +118,48 @@ func (s *stream) getURI() (url.URL, error) {
 	return uri, nil
 }
 
+// WaitForConnection is an optional public method that can be used to wait
+// for the websocket connection to be established. It is not used by the
+// stream directly. Instead it is intended to be used by the user to ensure
+// that the websocket connection is established before proceeding with other
+// tasks.
+// It returns a channel that will receive true when the connection is
+// established, and false if the connection attempt fails.
+// If the stream is not currently connecting, the channel will receive the
+// current connection status immediately.
+// The channel will be closed after exactly one value is received.
+func (s *stream) WaitForConnection() <-chan bool {
+	// make a channel to return to the user
+	waitForConnectionChan := make(chan bool)
+
+	go func() {
+		// close the channel when this function exits
+		defer close(waitForConnectionChan)
+
+		// if the stream is currently re-connecting, wait for the
+		// the isConnectingChan to close before returning
+		if c, ok := s.getIsConnectingChan(); ok {
+			<-c
+		}
+
+		// put the isConnected flag on the channel
+		waitForConnectionChan <- s.getIsConnectedStatus()
+	}()
+	return waitForConnectionChan
+}
+
 // connect creates the websocket connection.
 func (s *stream) connect(uri string) (*websocket.Conn, error) {
 	var conn *websocket.Conn
 	var err error
 
 	conn, _, err = websocket.DefaultDialer.Dial(uri, nil)
+
+	// if the connection is successful, close the isConnectingChan
+	if err == nil {
+		s.closeIsConnectingChan(true)
+	}
+
 	return conn, err
 }
 
@@ -107,8 +182,10 @@ func (s *stream) reconnectWithPolicy(
 			return conn, nil
 		}
 
-		// on last attempt, return error
+		// on last attempt, return error, close isConnectingChan
 		if i == s.reconnectPolicy.MaxAttempts-1 {
+			s.closeIsConnectingChan(false)
+
 			err = s.newWSConnError(err, "failed to reconnect", consecEarlyDisconnects, i+1, false)
 			logger.WithError(err).Warn("failed to reconnect")
 			s.handler.HandleError(err)
@@ -267,8 +344,10 @@ func (s *stream) Run(ctx context.Context) {
 
 	// set isRunning flag to true, and defer setting it to false
 	s.isRunning = true
+	s.isConnected = false
 	defer func() {
 		s.isRunning = false
+		s.isConnected = false
 	}()
 
 	// if the setPathFunc is not set, don't run the stream
@@ -293,6 +372,9 @@ func (s *stream) Run(ctx context.Context) {
 		s.pump = newWsPump(conn, s.connOpts.WSWriteWait, s.connOpts.WSPongWait, s.connOpts.WSPingPeriod, s.logger)
 		t0 := time.Now()
 		err = s.listen(s.pump, ctx)
+
+		// reopen the isConnectingChan
+		s.openIsConnectingChan()
 
 		// incr or reset consecEarlyDisconnects counter based on MinConnDuration
 		consecEarlyDisconnects = incrConsecEarlyDisconnects(consecEarlyDisconnects, t0, s.reconnectPolicy.MinConnDuration)

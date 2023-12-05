@@ -53,4 +53,5 @@ type StreamHandler interface {
 type Stream interface {
 	Run(ctx context.Context)
 	SetPathFunc(f func() string)
+	WaitForConnection() <-chan bool
 }
