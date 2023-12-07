@@ -52,6 +52,11 @@ func (p params) UrlValues() url.Values {
 
 /* ==================== ServiceBaseResponse ============================== */
 
+// Response is the interface that wraps the ParseBaseResponse method.
+type Response interface {
+	ParseBaseResponse(sm *common.ServiceMeta) error
+}
+
 // ServiceBaseResponse holds meta data that is common to all responses.
 type ServiceBaseResponse struct {
 	TSLSent common.TSNano

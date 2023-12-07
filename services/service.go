@@ -35,6 +35,30 @@ var (
 			WeightIP:            1,
 			WeightUID:           0,
 		},
+		"depth100": {
+			Scheme:              "https",
+			Method:              http.MethodGet,
+			Endpoint:            common.EndpointAPI,
+			Path:                "/api/v3/depth",
+			EndpointType:        common.EndpointTypeAPI,
+			SecurityType:        common.SecurityTypeNone,
+			PrimaryDatasource:   common.DataSourceMemory,
+			SecondaryDatasource: common.DataSourceNone,
+			WeightIP:            5,
+			WeightUID:           0,
+		},
+		"depth5000": {
+			Scheme:              "https",
+			Method:              http.MethodGet,
+			Endpoint:            common.EndpointAPI,
+			Path:                "/api/v3/depth",
+			EndpointType:        common.EndpointTypeAPI,
+			SecurityType:        common.SecurityTypeNone,
+			PrimaryDatasource:   common.DataSourceMemory,
+			SecondaryDatasource: common.DataSourceNone,
+			WeightIP:            250,
+			WeightUID:           0,
+		},
 		"createListenKey": {
 			Scheme:              "https",
 			Method:              http.MethodPost,
@@ -125,6 +149,18 @@ var (
 			WeightIP:            1,
 			WeightUID:           0,
 		},
+		"depth1000": {
+			Scheme:              "https",
+			Method:              http.MethodGet,
+			Endpoint:            common.EndpointFAPI,
+			Path:                "/fapi/v1/depth",
+			EndpointType:        common.EndpointTypeFAPI,
+			SecurityType:        common.SecurityTypeNone,
+			PrimaryDatasource:   common.DataSourceNone,
+			SecondaryDatasource: common.DataSourceNone,
+			WeightIP:            20,
+			WeightUID:           0,
+		},
 	}
 )
 
@@ -143,6 +179,24 @@ func NewSpotMarginServerTimeService(rc common.RESTClient, logger *log.Entry) *Se
 		SM:     *common.NewServiceMeta(APIServices["serverTime"]),
 		rc:     rc,
 		logger: logger.WithField("_caller", "SpotMarginServerTimeService"),
+	}
+}
+
+func NewSpotMarginDepth100Service(rc common.RESTClient, logger *log.Entry) *SpotMarginDepthService {
+	return &SpotMarginDepthService{
+		SM:     *common.NewServiceMeta(APIServices["depth100"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "SpotMarginDepth5000Service"),
+		depth:  100,
+	}
+}
+
+func NewSpotMarginDepth5000Service(rc common.RESTClient, logger *log.Entry) *SpotMarginDepthService {
+	return &SpotMarginDepthService{
+		SM:     *common.NewServiceMeta(APIServices["depth5000"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "SpotMarginDepth5000Service"),
+		depth:  5000,
 	}
 }
 
@@ -202,5 +256,14 @@ func NewFuturesPingService(rc common.RESTClient, logger *log.Entry) *PingService
 		SM:     *common.NewServiceMeta(FAPIServices["ping"]),
 		rc:     rc,
 		logger: logger.WithField("_caller", "FuturesPingService"),
+	}
+}
+
+func NewFuturesDepth1000Service(rc common.RESTClient, logger *log.Entry) *FuturesDepthService {
+	return &FuturesDepthService{
+		SM:     *common.NewServiceMeta(FAPIServices["depth1000"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "FuturesDepth1000Service"),
+		depth:  1000,
 	}
 }

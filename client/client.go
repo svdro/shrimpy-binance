@@ -45,10 +45,12 @@ type Client struct {
 	logger *log.Entry
 }
 
+// SetServerTimeOffset sets the server time offset on client.TimeHandler.
 func (c *Client) SetServerTimeOffset(offset int64) {
 	c.th.setServerTimeOffset(offset)
 }
 
+// GetServerTimeOffset gets the server time offset from client.TimeHandler.
 func (c *Client) GetServerTimeOffset() int64 {
 	return c.th.getServerTimeOffset()
 }
@@ -93,6 +95,14 @@ func (c *Client) NewSpotMarginServerTimeService() *services.ServerTimeService {
 	return services.NewSpotMarginServerTimeService(c.rc, c.logger)
 }
 
+func (c *Client) NewSpotMarginDepth100Service() *services.SpotMarginDepthService {
+	return services.NewSpotMarginDepth100Service(c.rc, c.logger)
+}
+
+func (c *Client) NewSpotMarginDepth5000Service() *services.SpotMarginDepthService {
+	return services.NewSpotMarginDepth5000Service(c.rc, c.logger)
+}
+
 func (c *Client) NewSpotCreateListenKeyService() *services.CreateListenKeyService {
 	return services.NewSpotCreateListenKeyService(c.rc, c.logger)
 }
@@ -123,4 +133,8 @@ func (c *Client) NewMarginCloseListenKeyService() *services.CloseListenKeyServic
 
 func (c *Client) NewFuturesPingService() *services.PingService {
 	return services.NewFuturesPingService(c.rc, c.logger)
+}
+
+func (c *Client) NewFuturesDepth1000Service() *services.FuturesDepthService {
+	return services.NewFuturesDepth1000Service(c.rc, c.logger)
 }
