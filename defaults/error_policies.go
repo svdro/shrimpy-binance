@@ -68,3 +68,22 @@ func (p *defaultErrorPolicy) Handle(err error) (bool, time.Duration, string) {
 
 	return false, time.Duration(0), "unknown error: exiting"
 }
+
+/* ==================== Default WS Error Policy =========================== */
+
+type defaultWSErrorPolicy struct {
+}
+
+func (p *defaultWSErrorPolicy) Handle(err error) (bool, time.Duration, string) {
+	switch err.(type) {
+	case *bc.WSConnError:
+		if err.(*bc.WSConnError).IsTransient {
+			return true, time.Duration(0), "websocket connection error: retrying"
+		}
+		return false, time.Duration(0), "websocket connection error: exiting"
+
+	case *bc.WSHandlerError:
+		return false, time.Duration(0), "websocket handler error: exiting"
+	}
+	return false, time.Duration(0), "websocket error: exiting"
+}
