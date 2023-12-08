@@ -238,6 +238,10 @@ func (rlc *rateLimitCounter) DecrementPending(decrPending int) {
 
 	// Something is seriously wrong if rlc.countPending falls below 0.
 	// Correct it, but issue a serious warning.
+	// NOTE: if rateLimitManager receives a rateLimitUpdate for an uninitialized
+	// rateLimitCounter, it will create a new rateLimitCounter. In this case
+	// countPending will be 0, and if we decrement it, it will always fall below 0.
+	// This only happens on the first request, so it's not that big of a deal.
 	if newCountPending < 0 {
 		rlc.countPending = 0
 

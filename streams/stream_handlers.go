@@ -98,6 +98,12 @@ func (h *MarketStreamHandler[E]) HandleSend(req common.WSRequest) *common.WSHand
 // If an error occurs, it is logged and returned to the caller. It is then
 // the caller's responsibility to handle the error. In this case stream.Run
 // will put the error on the ErrChan as a non-transient error, and shutdown.
+// NOTE: when passing new(E) to unmarshalAndSendEvent,
+// this does not correctly initialize the struct with its embedded structs.
+// it creates a pointer to a pointer of a nil value (or sth like that).
+// it works because json fixes the initialization, but only when
+// calling json.Unmarshal before calling methods on the embedded struct.
+// maybe fix this cause it's ugly, but also maybe not cause it works.
 func (h *MarketStreamHandler[E]) HandleRecv(msg []byte, TSLRecv, TSSRecv common.TSNano) *common.WSHandlerError {
 	wshErr := unmarshalAndSendEvent(msg, new(E), TSLRecv, TSSRecv, h.EventChan, h.logger)
 	return wshErr

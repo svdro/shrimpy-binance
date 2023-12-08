@@ -11,7 +11,7 @@ import (
 
 /* ==================== Shared DiffDepthStream ============================*/
 
-// DiffDepth100Stream is a shared Stream implementation for diff depth streams.
+// DiffDepthStream is a shared Stream implementation for diff depth streams.
 // It includes a Stream, a handler for market streams, and a symbol and the
 // update speed for WebSocket communication.
 type DiffDepthStream[E Event] struct {
@@ -34,7 +34,6 @@ func (s *DiffDepthStream[E]) SetSymbol(restSymbol string) *DiffDepthStream[E] {
 // path returns the path for the diff depth stream. It is used as the path
 // function for the stream.
 func (s *DiffDepthStream[E]) path() string {
-	//path := "/ws/%s@depth@100ms"
 	path := "/ws/%s@depth@%dms"
 	log.Info("path: ", fmt.Sprintf(path, *s.WSSymbol, *s.UpdateSpeed))
 	return fmt.Sprintf(path, *s.WSSymbol, *s.UpdateSpeed)
@@ -91,15 +90,6 @@ type SpotMarginDiffDepthStream = DiffDepthStream[*SpotMarginDiffDepthEvent]
 /* ==================== Futures ========================================== */
 
 // FuturesDiffDepthEvent is a diff depth event for futures markets.
-// TODO: convert millisecond timestamps to ns timestamps.
-// This is not trivial since this would logically be done in the
-// MarketStreamHandler when it unmarshals the event. However, the
-// MarketStreamHandler is generic and does not know about the
-// specific event type. Maybe make a TimespampNano type that
-// implements json.Unmarshaler and json.Marshaler, and use that
-// in the event?
-// That would break TimeHandler, which expects int64, so a custom TimespampNano
-// type would require changing TimeHandler, which is a little bit of work.
 type FuturesDiffDepthEvent struct {
 	StreamBaseEvent
 	sharedDiffDepthEvent

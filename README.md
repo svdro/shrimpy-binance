@@ -1,42 +1,70 @@
-## shrimpy-binance
+# shrimpy-binance
 
-A relatively light weight wrapper for some [binance REST APIs](https://binance-docs.github.io/apidocs/#change-log) and some websocket APIs.
-Endpoints are implemented on a "as needed" basis.
+`Shrimpy-binance` is a lightweight Go wrapper for some of Binance's [REST](https://binance-docs.github.io/apidocs/#change-log) and [Websocket](https://binance-docs.github.io/apidocs/#change-log) APIs.
+It simplifies interaction with REST and Websocket endpoints by providing streamlined interfaces and useful features.
+Endpoints are implemented on an "as needed" basis.
 
-### RESTClient
+## Features
 
-RESTClient implements `services` that return `Responses`.
+ - [x] **Websocket Streams**
+ - [x] **REST Services**
+ - [x] **Response Parsing**: all responses from websocket streams and rest services are parsed into structs.
+ - [x] **Rate Limit Management**: keep track of rate limits across diffenent endpoint types and rate limit types.
+ - [x] **Server Time Synchronization**: default implementation for synchronizing shrimpy-binance  client with server time.
+ - [ ] **Orderbook Management**: default implementation for maintaining local copies of orderbooks.
 
-#### Endpoints
- * [ ] `/api/v3/ping`
- * [x] `/api/v3/time` 
+## Installation
 
-### WSClient
+to install shrimpy-binance use go get:
 
-WSClient implements `streams` that generate `"Events"`
+```sh
+go get github.com/svdro/shrimpy-binance
+```
 
-### WebSocketAPI
+## Usage
 
-WebSocketAPI is a hybrid between a binance rest api and a websocket api.
-Effectively I want to use this like a RESTClient, but use an underlying
-websocket connection.
+### REST API Usage
 
+```golang
+import (
+    "context"
+    "fmt"
+	shrimpy "github.com/svdro/shrimpy-binance"
+)
 
-#### TODO:
- * [ ] Client should be able to register MetaData channels 
-   * [ ] RestMetaData -> Holds relevant data pertaining to requests 
-   * [ ] WsMetaData -> Holds relevant data pertaining to ws streams
- * [ ] Implement RateLimitHandling
- * [ ] Implement TimeHandler
- * [ ] Implement RestClient
-   * [x] ServiceMeta
-   * [x] Implement authentication
-   * [ ] Implement Handle status codes
- * [ ] Implement WSClient
-   * [ ] Implement Websocket Market Streams (Spot/Margin, Futures)
-   * [ ] Market data requests (WebsocketAPI)
- * [ ] Implement WSAPIClient
-   * [ ] Hybrid between RESTClient and WSClient 
-   * [ ] Only really need to implement market data endpoints (serverTime).
- * [x] Move ratelimit handler from RESTClient to Client 
-       (WebSocket API, and Spot/Margin API share rate limits :( )
+client := shrimpy.BinanceClient("apiKey", "apiSecret")
+if resp, err := client.NewSpotMarginServerTimeService().Do(context.Background()); err == nil {
+    fmt.Printf("%+v\n", resp)
+}
+```
+
+## Websocket API Usage
+
+```golang
+import (
+    "context"
+    "fmt"
+	shrimpy "github.com/svdro/shrimpy-binance"
+)
+
+client := binance.BinanceClient("apiKey", "apiSecret")
+stream := client.NewSpotMarginDiffDepth100Stream().SetSymbol("BTCUSDT")
+go func() {
+    for {
+        select {
+        case event := <-stream.Handler.EventChan:
+            fmt.Printf("%v+\n", event)
+        case err := <-stream.Handler.ErrChan:
+            fmt.Println(err)
+            return
+        }
+    }
+}()
+stream.Run(context.Background())
+
+```
+
+## TODOs:
+ * [ ] Make RLH and TH accessible for users of client.
+ * [ ] Monitoring: Client should be able to register MetaData channels 
+ * [ ] Test RateLimitHandler in live setting

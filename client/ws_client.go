@@ -36,12 +36,15 @@ type wsClient struct {
 func (wc *wsClient) NewStream(
 	sm *common.StreamMeta, handler common.StreamHandler, logger *log.Entry) common.Stream {
 	return &stream{
-		handler:         handler,
-		sm:              sm,
-		th:              wc.th,
-		connOpts:        wc.connOpts,
-		reconnectPolicy: wc.defaultReconnectPolicy,
-		pathFunc:        nil,
-		logger:          logger,
+		handler:          handler,
+		sm:               sm,
+		th:               wc.th,
+		connOpts:         wc.connOpts,
+		reconnectPolicy:  wc.defaultReconnectPolicy,
+		pathFunc:         nil,
+		isRunning:        false,
+		isConnected:      false,
+		isConnectingChan: make(chan struct{}),
+		logger:           logger,
 	}
 }
