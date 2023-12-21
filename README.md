@@ -65,10 +65,11 @@ stream.Run(context.Background())
 ```
 
 ## TODOs:
+
+ * [ ] Write test cases for exchangeInfoService and createOrderServcice
  * [ ] Make RLH and TH accessible for users of client.
- * [ ] Monitorine: Client should be able to register MetaData channels 
+ * [ ] Monitoring: Client should be able to register MetaData channels 
  * [ ] Test RateLimitHandler in live setting
- * [ ] Services
  * [ ] Fix sapi rate limit issues
    * [ ] ExchangeInfoService
    * [ ] OrderService
@@ -88,9 +89,9 @@ for counting other rate limits (e.g. `api`, `fapi`, `dapi`, etc).
   /sapi/v1/userDataStream) each have their own rate limits.
 
 To fix this, the logic for sapi rate limit counters needs to be changed fundamentally.
-- rate limits for `sapi` cannot defined in client options, but should logically 
-  be defined in the service definition for each `sapi` service instead, because 
+- rate limits for `sapi` cannot be defined in client options, but should logically 
+  be defined in the service definitior for each `sapi` service instead, because 
   different sapi endpoints can have different max rate limits.
-- `sapi` rate limit counters can no longer created the client options when the 
-  client is initialized. Instead `sapi` rate limit counters could be created 
+- `sapi` rate limit counters can no longer be created with client options when 
+  the client is initialized. Instead `sapi` rate limit counters could be created 
   dynamically the first time a `sapi` endpoint is called.

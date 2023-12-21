@@ -117,6 +117,19 @@ var (
 	}
 
 	SAPIServices = map[string]common.ServiceDefinition{
+		"systemStatus": {
+			Scheme:              "https",
+			Method:              http.MethodGet,
+			Endpoint:            common.EndpointAPI,
+			Path:                "/sapi/v1/system/status",
+			EndpointType:        common.EndpointTypeSAPI,
+			SecurityType:        common.SecurityTypeNone,
+			PrimaryDatasource:   common.DataSourceNone,
+			SecondaryDatasource: common.DataSourceNone,
+			WeightIP:            1,
+			WeightUID:           0,
+		},
+
 		"createListenKey": {
 			Scheme:              "https",
 			Method:              http.MethodPost,
@@ -155,6 +168,19 @@ var (
 			WeightIP:            1,
 			WeightUID:           0,
 		},
+
+		"createMarginOrder": {
+			Scheme:              "https",
+			Method:              http.MethodPost,
+			Endpoint:            common.EndpointAPI,
+			Path:                "/sapi/v1/margin/order",
+			EndpointType:        common.EndpointTypeSAPI,
+			SecurityType:        common.SecurityTypeSigned,
+			PrimaryDatasource:   common.DataSourceNone,
+			SecondaryDatasource: common.DataSourceNone,
+			WeightIP:            0,
+			WeightUID:           6,
+		},
 	}
 
 	FAPIServices = map[string]common.ServiceDefinition{
@@ -163,6 +189,19 @@ var (
 			Method:              http.MethodGet,
 			Endpoint:            common.EndpointFAPI,
 			Path:                "/fapi/v1/ping",
+			EndpointType:        common.EndpointTypeFAPI,
+			SecurityType:        common.SecurityTypeNone,
+			PrimaryDatasource:   common.DataSourceNone,
+			SecondaryDatasource: common.DataSourceNone,
+			WeightIP:            1,
+			WeightUID:           0,
+		},
+
+		"serverTime": {
+			Scheme:              "https",
+			Method:              http.MethodGet,
+			Endpoint:            common.EndpointFAPI,
+			Path:                "/fapi/v1/time",
 			EndpointType:        common.EndpointTypeFAPI,
 			SecurityType:        common.SecurityTypeNone,
 			PrimaryDatasource:   common.DataSourceNone,
@@ -268,6 +307,15 @@ func NewSpotMarginExchangeInfoService(rc common.RESTClient, logger *log.Entry) *
 }
 
 /* ==================== SAPIServices ===================================== */
+
+func NewMarginSystemStatusService(rc common.RESTClient, logger *log.Entry) *SystemStatusService {
+	return &SystemStatusService{
+		SM:     *common.NewServiceMeta(SAPIServices["systemStatus"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "MarginSystemStatusService"),
+	}
+}
+
 func NewMarginCreateListenKeyService(rc common.RESTClient, logger *log.Entry) *CreateListenKeyService {
 	return &CreateListenKeyService{
 		SM:     *common.NewServiceMeta(SAPIServices["createListenKey"]),
@@ -292,6 +340,14 @@ func NewMarginCloseListenKeyService(rc common.RESTClient, logger *log.Entry) *Cl
 	}
 }
 
+func NewCreateMarginOrderService(rc common.RESTClient, logger *log.Entry) *CreateMarginOrderService {
+	return &CreateMarginOrderService{
+		SM:     *common.NewServiceMeta(SAPIServices["createMarginOrder"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "CreateMarginOrderService"),
+	}
+}
+
 /* ==================== FAPIServices ===================================== */
 
 func NewFuturesPingService(rc common.RESTClient, logger *log.Entry) *PingService {
@@ -299,6 +355,14 @@ func NewFuturesPingService(rc common.RESTClient, logger *log.Entry) *PingService
 		SM:     *common.NewServiceMeta(FAPIServices["ping"]),
 		rc:     rc,
 		logger: logger.WithField("_caller", "FuturesPingService"),
+	}
+}
+
+func NewFuturesServerTimeService(rc common.RESTClient, logger *log.Entry) *ServerTimeService {
+	return &ServerTimeService{
+		SM:     *common.NewServiceMeta(FAPIServices["serverTime"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "FuturesServerTimeService"),
 	}
 }
 

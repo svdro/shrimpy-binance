@@ -121,6 +121,10 @@ func (c *Client) NewSpotMarginExchangeInfoService() *services.SpotMarginExchange
 
 /* ==================== SAPI-Services Factory ============================ */
 
+func (c *Client) NewMarginSystemStatusService() *services.SystemStatusService {
+	return services.NewMarginSystemStatusService(c.rc, c.logger)
+}
+
 func (c *Client) NewMarginCreateListenKeyService() *services.CreateListenKeyService {
 	return services.NewMarginCreateListenKeyService(c.rc, c.logger)
 }
@@ -133,10 +137,18 @@ func (c *Client) NewMarginCloseListenKeyService() *services.CloseListenKeyServic
 	return services.NewMarginCloseListenKeyService(c.rc, c.logger)
 }
 
+func (c *Client) NewCreateMarginOrderService() *services.CreateMarginOrderService {
+	return services.NewCreateMarginOrderService(c.rc, c.logger)
+}
+
 /* ==================== FAPI-Services Factory ============================ */
 
 func (c *Client) NewFuturesPingService() *services.PingService {
 	return services.NewFuturesPingService(c.rc, c.logger)
+}
+
+func (c *Client) NewFuturesServerTimeService() *services.ServerTimeService {
+	return services.NewFuturesServerTimeService(c.rc, c.logger)
 }
 
 func (c *Client) NewFuturesDepth1000Service() *services.FuturesDepthService {

@@ -36,8 +36,8 @@ type Balance struct {
 
 type AccountUpdateEvent struct {
 	StreamBaseEvent
-	TSSLUpdate common.TSNano `json:"u"` // time of last account update
-	Balances   []Balance     `json:"B"`
+	TSSLastUpdate common.TSNano `json:"u"` // time of last account update
+	Balances      []Balance     `json:"B"`
 }
 
 type BalanceUpdateEvent struct {

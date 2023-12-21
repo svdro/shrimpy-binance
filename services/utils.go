@@ -73,3 +73,13 @@ func (s *ServiceBaseResponse) ParseBaseResponse(sm *common.ServiceMeta) error {
 	s.TSSRecv = sm.TSSRecv
 	return nil
 }
+
+// boolToUpperStr converts a bool to an upper case string.
+// some binance API endpoint expect "TRUE" or "FALSE" instead of regular
+// true or false (e.g. MarginOrder IsIsolated).
+func boolToUpperStr(b bool) string {
+	if b {
+		return "TRUE"
+	}
+	return "FALSE"
+}
