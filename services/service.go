@@ -23,6 +23,7 @@ var (
 			WeightIP:            1,
 			WeightUID:           0,
 		},
+
 		"serverTime": {
 			Scheme:              "https",
 			Method:              http.MethodGet,
@@ -35,6 +36,7 @@ var (
 			WeightIP:            1,
 			WeightUID:           0,
 		},
+
 		"depth100": {
 			Scheme:              "https",
 			Method:              http.MethodGet,
@@ -47,6 +49,7 @@ var (
 			WeightIP:            5,
 			WeightUID:           0,
 		},
+
 		"depth5000": {
 			Scheme:              "https",
 			Method:              http.MethodGet,
@@ -59,6 +62,7 @@ var (
 			WeightIP:            250,
 			WeightUID:           0,
 		},
+
 		"createListenKey": {
 			Scheme:              "https",
 			Method:              http.MethodPost,
@@ -71,6 +75,7 @@ var (
 			WeightIP:            2,
 			WeightUID:           0,
 		},
+
 		"pingListenKey": {
 			Scheme:              "https",
 			Method:              http.MethodPut,
@@ -83,6 +88,7 @@ var (
 			WeightIP:            2,
 			WeightUID:           0,
 		},
+
 		"closeListenKey": {
 			Scheme:              "https",
 			Method:              http.MethodDelete,
@@ -93,6 +99,19 @@ var (
 			PrimaryDatasource:   common.DataSourceMemory,
 			SecondaryDatasource: common.DataSourceNone,
 			WeightIP:            2,
+			WeightUID:           0,
+		},
+
+		"exchangeInfo": {
+			Scheme:              "https",
+			Method:              http.MethodGet,
+			Endpoint:            common.EndpointAPI,
+			Path:                "/api/v3/exchangeInfo",
+			EndpointType:        common.EndpointTypeAPI,
+			SecurityType:        common.SecurityTypeNone,
+			PrimaryDatasource:   common.DataSourceMemory,
+			SecondaryDatasource: common.DataSourceNone,
+			WeightIP:            10,
 			WeightUID:           0,
 		},
 	}
@@ -110,6 +129,7 @@ var (
 			WeightIP:            1,
 			WeightUID:           0,
 		},
+
 		"pingListenKey": {
 			Scheme:              "https",
 			Method:              http.MethodPut,
@@ -122,6 +142,7 @@ var (
 			WeightIP:            1,
 			WeightUID:           0,
 		},
+
 		"closeListenKey": {
 			Scheme:              "https",
 			Method:              http.MethodDelete,
@@ -149,6 +170,7 @@ var (
 			WeightIP:            1,
 			WeightUID:           0,
 		},
+
 		"depth1000": {
 			Scheme:              "https",
 			Method:              http.MethodGet,
@@ -159,6 +181,19 @@ var (
 			PrimaryDatasource:   common.DataSourceNone,
 			SecondaryDatasource: common.DataSourceNone,
 			WeightIP:            20,
+			WeightUID:           0,
+		},
+
+		"exchangeInfo": {
+			Scheme:              "https",
+			Method:              http.MethodGet,
+			Endpoint:            common.EndpointFAPI,
+			Path:                "/fapi/v1/exchangeInfo",
+			EndpointType:        common.EndpointTypeFAPI,
+			SecurityType:        common.SecurityTypeNone,
+			PrimaryDatasource:   common.DataSourceNone,
+			SecondaryDatasource: common.DataSourceNone,
+			WeightIP:            1,
 			WeightUID:           0,
 		},
 	}
@@ -224,6 +259,14 @@ func NewSpotCloseListenKeyService(rc common.RESTClient, logger *log.Entry) *Clos
 	}
 }
 
+func NewSpotMarginExchangeInfoService(rc common.RESTClient, logger *log.Entry) *SpotMarginExchangeInfoService {
+	return &SpotMarginExchangeInfoService{
+		SM:     *common.NewServiceMeta(APIServices["exchangeInfo"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "SpotMarginExchangeInfoService"),
+	}
+}
+
 /* ==================== SAPIServices ===================================== */
 func NewMarginCreateListenKeyService(rc common.RESTClient, logger *log.Entry) *CreateListenKeyService {
 	return &CreateListenKeyService{
@@ -265,5 +308,13 @@ func NewFuturesDepth1000Service(rc common.RESTClient, logger *log.Entry) *Future
 		rc:     rc,
 		logger: logger.WithField("_caller", "FuturesDepth1000Service"),
 		depth:  1000,
+	}
+}
+
+func NewFuturesExchangeInfoService(rc common.RESTClient, logger *log.Entry) *FuturesExchangeInfoService {
+	return &FuturesExchangeInfoService{
+		SM:     *common.NewServiceMeta(FAPIServices["exchangeInfo"]),
+		rc:     rc,
+		logger: logger.WithField("_caller", "FuturesExchangeInfoService"),
 	}
 }
