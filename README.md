@@ -66,5 +66,31 @@ stream.Run(context.Background())
 
 ## TODOs:
  * [ ] Make RLH and TH accessible for users of client.
- * [ ] Monitoring: Client should be able to register MetaData channels 
+ * [ ] Monitorine: Client should be able to register MetaData channels 
  * [ ] Test RateLimitHandler in live setting
+ * [ ] Services
+ * [ ] Fix sapi rate limit issues
+   * [ ] ExchangeInfoService
+   * [ ] OrderService
+
+## Issues with SAPI Rate Limits
+
+Currently rate limits for sapi endpoints are not handled correctly. 
+Until this is fixed set sapi rate limits to -1 in client options and hope for 
+the best :(.
+
+This is because the logic for counting `sapi` rate limits is different from that 
+for counting other rate limits (e.g. `api`, `fapi`, `dapi`, etc).
+- usually all endpoints of the same type (e.g. /api/v3/serverTime, /api/v3/ping)
+  contribute to a shared rate limit for that endpoint type (`api` in this case).
+- for `sapi` endpoints binance uses a distinct rate limit for each endpoint.
+  This means that different `sapi` endpoints (e.g. /sapi/v1/system/status,
+  /sapi/v1/userDataStream) each have their own rate limits.
+
+To fix this, the logic for sapi rate limit counters needs to be changed fundamentally.
+- rate limits for `sapi` cannot defined in client options, but should logically 
+  be defined in the service definition for each `sapi` service instead, because 
+  different sapi endpoints can have different max rate limits.
+- `sapi` rate limit counters can no longer created the client options when the 
+  client is initialized. Instead `sapi` rate limit counters could be created 
+  dynamically the first time a `sapi` endpoint is called.

@@ -133,10 +133,11 @@ func (rlc *rateLimitCounter) SetUsed(countUsed int, tssResp common.TSNano) {
 		return
 	}
 
-	// always log if countUsed exceeds 75% of the limit
-	if countUsed > rlc.limit*3/4 {
-		logger.Debug("SetUsed: countUsed approaches limit")
-	}
+	logger.Debug("SetUsed")
+	//// always log if countUsed exceeds 75% of the limit
+	//if countUsed > rlc.limit*3/4 {
+	//logger.Debug("SetUsed: countUsed approaches limit")
+	//}
 
 	// always set countUsed if currInterval is greater than rlc.currInterval,
 	// also set rlc.currInterval to the new currInterval.
